@@ -1,4 +1,5 @@
-
+import sys
+from PyQt5.QtWidgets import QApplication
 
 def main():
     print("Hello!!!")
