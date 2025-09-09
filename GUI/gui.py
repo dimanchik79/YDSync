@@ -12,7 +12,7 @@ class Window(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         uic.loadUi("GUI/mainwindow.ui", self)
-        self.setFixedSize(699, 410)
+        self.setFixedSize(699, 450)
 
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
         self.tray_icon.setIcon(QtGui.QIcon("GUI/icon.ico"))
@@ -32,10 +32,10 @@ class Window(QMainWindow):
         self.tray_icon.show()
 
     def onTrayIconActivated(self, reason) -> None:
-        if reason == QtWidgets.QSystemTrayIcon.DoubleClick:
+        if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore
             self.show()
 
     @staticmethod
-    def exit_program(self):
+    def exit_program():
         """Метод закрывает окно программы"""
         sys.exit()
