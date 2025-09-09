@@ -11,8 +11,8 @@ LANGUAGE = {
     'pb_openlog': {'ru': 'Открыть лог-файл', 'en': 'Open log-file'},
     'l_timesync': {'ru': 'Синхронизировать через:', 'en': 'Synchronization time:'},
     'l_sec': {'ru': 'СЕК', 'en': 'SEC'},
-    'bp_start': {'ru': 'Старт', 'en': 'Start'},
-    'bp_stop': {'ru': 'Стоп', 'en': 'Stop'},
+    'bp_start': {'ru': 'Начать синхронизация', 'en': 'Start sync'},
+    'bp_stop': {'ru': 'Остановить', 'en': 'Stop sync'},
 }
 
 CONFIG_DEFAULT = {
