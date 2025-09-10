@@ -4,7 +4,7 @@ import sys
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu
 
-from config import LANGUAGE
+from SRC.config import LANGUAGE
 
 
 class Window(QMainWindow):
