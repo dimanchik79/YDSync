@@ -9,6 +9,7 @@ from config import LANGUAGE
 
 
 class Window(QMainWindow):
+
     CONFIG = json.load(open("config.json", "r"))
 
     def __init__(self) -> None:
@@ -83,9 +84,9 @@ class Window(QMainWindow):
         self.le_local.setText(self.CONFIG['local'])
         self.le_yddir.setText(self.CONFIG['yddir'])
         if self.CONFIG['ignoreextensions']:
-            extensions = ','.join(self.CONFIG['ignoreextensions'])
+            extensions = ', '.join(self.CONFIG['ignoreextensions'])
         if self.CONFIG['ignorefiles']:
-            files = ','.join(self.CONFIG['ignorefiles'])
+            files = ', '.join(self.CONFIG['ignorefiles'])
         self.le_ignoreextension.setText(extensions)
         self.le_ignorefiles.setText(files)
         self.le_logsize.setText(str(self.CONFIG['logsize']))

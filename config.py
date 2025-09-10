@@ -5,7 +5,7 @@ LANGUAGE = {
     'l_local': {'ru': 'Локальная папка:', 'en': 'Local folder:'},
     'l_yddir': {'ru': 'Папка на Яндекс.Диске:', 'en': 'Yandex.Disk folder:'},
     'l_ignoreextension': {'ru': 'Игнорировать файлы с расширением:', 'en': 'Ignore files with the extension:'},
-    'l_ignorefiles': {'ru': 'Игнорировать файлы с именем:', 'en': 'Ignore files with the name:'},
+    'l_ignorefiles': {'ru': 'Игнорировать файлы:', 'en': 'Ignore files:'},
     'l_logsize': {'ru': 'Размер лог-файла не более:', 'en': 'The size of the log file:'},
     'l_kb': {'ru': 'КБ', 'en': 'Kb'},
     'pb_openlog': {'ru': 'Открыть лог-файл', 'en': 'Open log-file'},
