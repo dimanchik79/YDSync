@@ -1,6 +1,5 @@
 import json
 import sys
-from distutils.command.config import config
 
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu
