@@ -54,7 +54,7 @@ class Window(QMainWindow):
         json.dump(self.CONFIG, open('config.json', 'w'), indent=4)
         self.hide()
 
-    def language_set(self, language):
+    def language_set(self, language: str) -> None:
         self.l_language.setText(LANGUAGE['l_language'][language])
         self.pb_help.setText(LANGUAGE['pb_help'][language])
         self.l_token.setText(LANGUAGE['l_token'][language])
@@ -71,7 +71,7 @@ class Window(QMainWindow):
         self.pb_stop.setText(LANGUAGE['pb_stop'][language])
         self.CONFIG['language'] = language
 
-    def set_from_config(self):
+    def set_from_config(self) -> None:
         extensions, files = '', ''
         if self.CONFIG['language'] == 'ru':
             self.r_rus.setChecked(True)
