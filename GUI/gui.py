@@ -9,10 +9,11 @@ from config import LANGUAGE
 
 class Window(QMainWindow):
 
-    CONFIG = json.load(open("config.json", "r"))
-
-    def __init__(self) -> None:
+    def __init__(self, conf) -> None:
         super().__init__()
+        
+        self.configure = conf
+        
         uic.loadUi("GUI/mainwindow.ui", self)
         self.setFixedSize(699, 450)
 
@@ -20,11 +21,11 @@ class Window(QMainWindow):
         self.tray_icon.setIcon(QtGui.QIcon("GUI/icon.ico"))
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
-        show_action = QAction(LANGUAGE['open'][self.CONFIG['language']], self)
+        show_action = QAction(LANGUAGE['open'][self.configure['language']], self)
         show_action.triggered.connect(self.show)
 
 
-        exit_action = QtWidgets.QAction(LANGUAGE['exit'][self.CONFIG['language']], self)
+        exit_action = QtWidgets.QAction(LANGUAGE['exit'][self.configure['language']], self)
         exit_action.triggered.connect(self.exit_program)
 
         tray_menu = QMenu(self)
@@ -45,13 +46,13 @@ class Window(QMainWindow):
 
     def exit_program(self):
         """Метод закрывает окно программы"""
-        json.dump(self.CONFIG, open('config.json', 'w'), indent=4)
+        json.dump(self.configure, open('config.json', 'w'), indent=4)
         sys.exit()
 
     def closeEvent(self, event) -> None:
         """Метод вызывает метод выхода из программы"""
         event.ignore()  # Не вызывать метод closeEvent
-        json.dump(self.CONFIG, open('config.json', 'w'), indent=4)
+        json.dump(self.configure, open('config.json', 'w'), indent=4)
         self.hide()
 
     def language_set(self, language: str) -> None:
@@ -69,27 +70,27 @@ class Window(QMainWindow):
         self.l_sec.setText(LANGUAGE['l_sec'][language])
         self.pb_start.setText(LANGUAGE['pb_start'][language])
         self.pb_stop.setText(LANGUAGE['pb_stop'][language])
-        self.CONFIG['language'] = language
+        self.configure['language'] = language
 
     def set_from_config(self) -> None:
         extensions, files = '', ''
-        if self.CONFIG['language'] == 'ru':
+        if self.configure['language'] == 'ru':
             self.r_rus.setChecked(True)
-        if self.CONFIG['language'] == 'en':
+        if self.configure['language'] == 'en':
             self.r_eng.setChecked(True)
-        self.language_set(self.CONFIG['language'])
+        self.language_set(self.configure['language'])
 
-        self.le_token.setText(self.CONFIG['token'])
-        self.le_local.setText(self.CONFIG['local'])
-        self.le_yddir.setText(self.CONFIG['yddir'])
-        if self.CONFIG['ignoreextensions']:
-            extensions = ', '.join(self.CONFIG['ignoreextensions'])
-        if self.CONFIG['ignorefiles']:
-            files = ', '.join(self.CONFIG['ignorefiles'])
+        self.le_token.setText(self.configure['token'])
+        self.le_local.setText(self.configure['local'])
+        self.le_yddir.setText(self.configure['yddir'])
+        if self.configure['ignoreextensions']:
+            extensions = ', '.join(self.configure['ignoreextensions'])
+        if self.configure['ignorefiles']:
+            files = ', '.join(self.configure['ignorefiles'])
         self.le_ignoreextension.setText(extensions)
         self.le_ignorefiles.setText(files)
-        self.le_logsize.setText(str(self.CONFIG['logsize']))
-        self.le_timesync.setText(str(self.CONFIG['timesync']))
+        self.le_logsize.setText(str(self.configure['logsize']))
+        self.le_timesync.setText(str(self.configure['timesync']))
 
 
 

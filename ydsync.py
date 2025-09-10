@@ -2,6 +2,7 @@ import sys
 import json
 import logging
 from os import path
+from logging.handlers import RotatingFileHandler
 
 from PyQt5 import QtWidgets
 from GUI.gui import Window
@@ -9,20 +10,27 @@ from GUI.gui import Window
 from config import CONFIG_DEFAULT
 
 
+configure = json.load(open("config.json", "r"))
+
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('yd_sync.log'),
+        RotatingFileHandler(
+            'yd_sync.log', 
+            maxBytes=(configure['logsize'] * 1024),
+        ),
         logging.StreamHandler()
     ]
 )
+
 logger = logging.getLogger('YandexDiskSync')
 
 def main():
     """Запуск приложения"""
     app = QtWidgets.QApplication(sys.argv)
-    window = Window()
+    window = Window(configure)
     window.show()
     sys.exit(app.exec_())
 
