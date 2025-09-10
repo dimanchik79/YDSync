@@ -4,10 +4,6 @@ from PyQt5.QtWidgets import QMainWindow, QAction, QMenu
 
 
 class Window(QMainWindow):
-    """Модель инициализации интерфейса плейера
-    play_list: dict -
-
-    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -16,7 +12,7 @@ class Window(QMainWindow):
 
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
         self.tray_icon.setIcon(QtGui.QIcon("GUI/icon.ico"))
-        self.tray_icon.activated.connect(self.onTrayIconActivated)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
         show_action = QAction("Настройки", self)
         show_action.triggered.connect(self.show)
@@ -31,7 +27,7 @@ class Window(QMainWindow):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
-    def onTrayIconActivated(self, reason) -> None:
+    def on_tray_icon_activated(self, reason) -> None:
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore
             self.show()
 
