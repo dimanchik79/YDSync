@@ -9,10 +9,11 @@ from GUI.gui import Window
 
 from SRC.config import CONFIG_DEFAULT
 
-
 # загружаем конфиг
-configure = json.load(open("config.json", "r"))
+if not path.exists('config.json'):
+    json.dump(CONFIG_DEFAULT, open('config.json', 'w'), indent=4)
 
+configure = json.load(open("config.json", "r"))
 
 # инициализируем логгер
 logging.basicConfig(
@@ -39,6 +40,4 @@ def main():
 
 
 if __name__ == "__main__":
-    if not path.exists('config.json'):
-        json.dump(CONFIG_DEFAULT, open('config.json', 'w'), indent=4)
     exit(main())
