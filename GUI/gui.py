@@ -2,7 +2,7 @@ import json
 import sys
 
 from PyQt5 import uic, QtWidgets, QtGui
-from PyQt5.QtWidgets import QMainWindow, QAction, QMenu
+from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
 
 from SRC.config import LANGUAGE
 
@@ -37,6 +37,8 @@ class Window(QMainWindow):
         self.r_rus.clicked.connect(lambda: self.language_set("ru"))
         self.r_eng.clicked.connect(lambda: self.language_set("en"))
 
+        self.pb_local.clicked.connect(self.add_folder)
+
         self.set_from_config()
 
 
@@ -52,7 +54,6 @@ class Window(QMainWindow):
     def closeEvent(self, event) -> None:
         """Метод вызывает метод выхода из программы"""
         event.ignore()  # Не вызывать метод closeEvent
-        json.dump(self.configure, open('config.json', 'w'), indent=4)
         self.hide()
 
     def language_set(self, language: str) -> None:
@@ -91,6 +92,12 @@ class Window(QMainWindow):
         self.le_ignorefiles.setText(files)
         self.le_logsize.setText(str(self.configure['logsize']))
         self.le_timesync.setText(str(self.configure['timesync']))
+
+    def add_folder(self):
+        local = QFileDialog.getExistingDirectory()
+        self.configure['local'] = local
+        self.le_local.setText(local)
+
 
 
 
