@@ -453,7 +453,7 @@ color: rgb(143, 240, 164);
 border-top: 1px solid white;</string>
     </property>
     <property name="text">
-     <string>0000:00:00</string>
+     <string/>
     </property>
    </widget>
    <widget class="QPushButton" name="pb_help">
