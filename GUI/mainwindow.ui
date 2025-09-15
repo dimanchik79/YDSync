@@ -20,6 +20,9 @@
   <property name="styleSheet">
    <string notr="true">background-color: rgb(61, 56, 70);</string>
   </property>
+  <property name="inputMethodHints">
+   <set>Qt::ImhNone</set>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLabel" name="l_language">
     <property name="geometry">
@@ -182,6 +185,15 @@ background-color: #007acc;
 color: rgb(153, 193, 241);
 border: 1px solid white;
 }</string>
+    </property>
+    <property name="inputMethodHints">
+     <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+    </property>
+    <property name="echoMode">
+     <enum>QLineEdit::Password</enum>
+    </property>
+    <property name="clearButtonEnabled">
+     <bool>false</bool>
     </property>
    </widget>
    <widget class="QLineEdit" name="le_local">
@@ -352,6 +364,9 @@ color: rgb(153, 193, 241);
 border: 1px solid white;
 }</string>
     </property>
+    <property name="inputMethodHints">
+     <set>Qt::ImhNone</set>
+    </property>
    </widget>
    <widget class="QLabel" name="l_kb">
     <property name="geometry">
@@ -359,14 +374,14 @@ border: 1px solid white;
       <x>340</x>
       <y>260</y>
       <width>131</width>
-      <height>31</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="styleSheet">
      <string notr="true">color: rgb(255, 255, 255);</string>
     </property>
     <property name="text">
-     <string>КБ</string>
+     <string>(1 - 1024) КБ</string>
     </property>
    </widget>
    <widget class="QLabel" name="l_prompt">
@@ -524,14 +539,14 @@ border: 2px solid  rgb(153, 193, 241);</string>
       <x>340</x>
       <y>300</y>
       <width>131</width>
-      <height>31</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="styleSheet">
      <string notr="true">color: rgb(255, 255, 255);</string>
     </property>
     <property name="text">
-     <string>СЕК</string>
+     <string>(10 - 120) СЕК</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="le_timesync">
@@ -548,6 +563,9 @@ border: 2px solid  rgb(153, 193, 241);</string>
 color: rgb(153, 193, 241);
 border: 1px solid white;
 }</string>
+    </property>
+    <property name="inputMethodHints">
+     <set>Qt::ImhNone</set>
     </property>
    </widget>
   </widget>

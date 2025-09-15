@@ -94,9 +94,9 @@ class SyncWindow(QMainWindow):
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore
             self.show()
 
-    @staticmethod
     def exit_program(self) -> None:
         """Метод закрывает окно программы"""
+        self.save_config()
         json.dump(CONFIGURE, open('config.json', 'w'), indent=4)
         sys.exit()
 
@@ -154,6 +154,9 @@ class SyncWindow(QMainWindow):
         files = QFileDialog.getOpenFileNames(self, LANGUAGE['add_files'][CONFIGURE['language']], "")[0]
         if files:
             self.le_ignorefiles.setText(', '.join(Path(path).name for path in files))
+
+    def save_config(self) -> None:
+        CONFIGURE['token'] = self.le_token.text() if self.le_token.text() else ''
 
     def synchronize(self) -> None:
         while True:
