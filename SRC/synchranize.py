@@ -3,6 +3,8 @@ import sys
 import threading
 import time
 
+from pathlib import Path
+
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -11,6 +13,7 @@ from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
 
 from SRC.config import LANGUAGE
 from SRC.utils import get_time
+from SRC.config import tray_menu_style
 
 CONFIGURE = json.load(open("config.json", "r"))
 
@@ -50,6 +53,8 @@ class SyncWindow(QMainWindow):
         exit_action = QtWidgets.QAction(LANGUAGE['exit'][CONFIGURE['language']], self)
         exit_action.triggered.connect(self.exit_program)
         tray_menu = QMenu(self)
+        tray_menu.setStyleSheet(tray_menu_style)
+
         tray_menu.addAction(show_action)
         tray_menu.addAction(exit_action)
         self.tray_icon.setContextMenu(tray_menu)
@@ -61,6 +66,7 @@ class SyncWindow(QMainWindow):
         self.pb_local.clicked.connect(self.add_folder)
         self.pb_start.clicked.connect(self.start_sync)
         self.pb_stop.clicked.connect(self.stop_sync)
+        self.pb_ignorefiles.clicked.connect(self.add_files)
 
         # Buttons
         self.pb_start.setEnabled(True)
@@ -139,9 +145,14 @@ class SyncWindow(QMainWindow):
 
     def add_folder(self) -> None:
         """Метод добавляет папку для синхронизации"""
-        local = QFileDialog.getExistingDirectory()
+        local = QFileDialog.getExistingDirectory(self, LANGUAGE['add_folder'][CONFIGURE['language']], "")
         CONFIGURE['local'] = local
         self.le_local.setText(local)
+
+    def add_files(self) -> None:
+        files = QFileDialog.getOpenFileNames(self, LANGUAGE['add_files'][CONFIGURE['language']], "")[0]
+        if files:
+            self.le_ignorefiles.setText(', '.join(Path(path).name for path in files))
 
     def synchronize(self) -> None:
         while True:

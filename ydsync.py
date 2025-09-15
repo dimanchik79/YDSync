@@ -3,7 +3,7 @@ import json
 from os import path
 
 from PyQt5 import QtWidgets
-from MAIN.synchranize import SyncWindow
+from SRC.synchranize import SyncWindow
 
 from SRC.config import CONFIG_DEFAULT
 

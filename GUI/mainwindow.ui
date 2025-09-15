@@ -267,7 +267,7 @@ border: 1px solid white;
 }</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pb_ignorename">
+   <widget class="QPushButton" name="pb_ignorefiles">
     <property name="geometry">
      <rect>
       <x>660</x>
@@ -296,7 +296,7 @@ border: 1px solid white;
      <string notr="true">color: rgb(255, 255, 255);</string>
     </property>
     <property name="text">
-     <string>Игнорировать файлы c именем:</string>
+     <string>Игнорировать файлы:</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="le_ignorefiles">

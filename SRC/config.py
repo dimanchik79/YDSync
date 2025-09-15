@@ -15,6 +15,8 @@ LANGUAGE = {
     'pb_stop': {'ru': 'Остановить', 'en': 'Stop sync'},
     'exit': {'ru': 'Выход', 'en': 'Exit'},
     'open': {'ru': 'Открыть окно', 'en': 'Open Window'},
+    'add_folder': {'ru': 'Добавить папку', 'en': 'Add folder'},
+    'add_files': {'ru': 'Добавить файлы', 'en': 'Add files'},
 }
 
 CONFIG_DEFAULT = {
@@ -27,3 +29,22 @@ CONFIG_DEFAULT = {
     'logsize': 1024,
     'timesync': 60,
 }
+
+tray_menu_style = """
+            QMenu {
+                background-color: #2c3e50;
+                color: white;
+                border: 1px solid #34495e;
+                border-radius: 5px;
+            }
+            QMenu::item {
+                padding: 5px 20px;
+                border-bottom: 1px solid #34495e;
+            }
+            QMenu::item:selected {
+                background-color: #3498db;
+            }
+            QMenu::item:disabled {
+                color: #7f8c8d;
+            }
+        """
