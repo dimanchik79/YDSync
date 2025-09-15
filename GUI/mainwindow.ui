@@ -210,7 +210,9 @@ border: 1px solid white;
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgb(255, 255, 255);</string>
+     <string notr="true">background-color: rgb(255, 255, 255);
+border-radius: 5px;
+border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
      <string>?</string>
@@ -226,7 +228,9 @@ border: 1px solid white;
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgb(255, 255, 255);</string>
+     <string notr="true">background-color: rgb(255, 255, 255);
+border-radius: 5px;
+border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
      <string>...</string>
@@ -277,7 +281,9 @@ border: 1px solid white;
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgb(255, 255, 255);</string>
+     <string notr="true">background-color: rgb(255, 255, 255);
+border-radius: 5px;
+border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
      <string>...</string>
@@ -404,7 +410,9 @@ border-top:1px solid white;</string>
     </property>
     <property name="styleSheet">
      <string notr="true">background-color: rgb(255, 255, 255);
-color: rgb(38, 162, 105);</string>
+color: rgb(38, 162, 105);
+border-radius: 5px;
+border: 2px solid rgb(38, 162, 105);</string>
     </property>
     <property name="text">
      <string>Начать синхронизацию</string>
@@ -427,7 +435,9 @@ color: rgb(38, 162, 105);</string>
     </property>
     <property name="styleSheet">
      <string notr="true">background-color: rgb(255, 255, 255);
-color: rgb(165, 29, 45);</string>
+color: rgb(165, 29, 45);
+border-radius: 5px;
+border: 2px solid rgb(165, 29, 45);</string>
     </property>
     <property name="text">
      <string>Остановить</string>
@@ -466,7 +476,9 @@ border-top: 1px solid white;</string>
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgb(255, 255, 255);</string>
+     <string notr="true">background-color: rgb(255, 255, 255);
+border-radius: 5px;
+border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
      <string>Помощь</string>
@@ -482,7 +494,9 @@ border-top: 1px solid white;</string>
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgb(255, 255, 255);</string>
+     <string notr="true">background-color: rgb(255, 255, 255);
+border-radius: 5px;
+border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
      <string>Открыть лог-файл</string>

@@ -1,15 +1,9 @@
-import time
 
-def get_time(time_sync: int) -> str:
-    days = time_sync // (24 * 3600)
-    seconds = time_sync % (24 * 3600)
-    hours = time_sync // 3600
-    seconds %= 3600
-    minutes = time_sync // 60
-    time_sync %= 60
-
-    # Форматируем с ведущими нулями
-    return f"{days:02d}:{hours:02d}:{minutes:02d}:{time_sync:02d}"
+def get_time(time_sync: float) -> str:
+    """Функция преобразует полученную длину песни в формат 00:00:00"""
+    temp, secs = divmod(int(time_sync), 60)
+    hours, minuts = divmod(int(temp), 60)
+    return f'{hours:02d}:{minuts:02d}:{secs:02d}'
 
 
 
