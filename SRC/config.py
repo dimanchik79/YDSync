@@ -17,7 +17,10 @@ LANGUAGE = {
     'open': {'ru': 'Открыть окно', 'en': 'Open Window'},
     'add_folder': {'ru': 'Добавить папку', 'en': 'Add folder'},
     'add_files': {'ru': 'Добавить файлы', 'en': 'Add files'},
+    'sync_begin': {'ru': 'Синхронизация началась', 'en': 'Synchronization started'},
+    'sync_end': {'ru': 'Синхронизация завершена', 'en': 'Synchronization ended'},
 }
+
 
 CONFIG_DEFAULT = {
     'language': 'ru',
@@ -29,6 +32,7 @@ CONFIG_DEFAULT = {
     'logsize': 1024,
     'timesync': 60,
 }
+
 
 tray_menu_style = """
             QMenu {

@@ -79,7 +79,7 @@ class SyncWindow(QMainWindow):
         """Метод запускает цикл синхронизации"""
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
-        logger.info("Синхронизация запущена")
+        logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
         self.loop = True
         self.sync_time = 0
 
@@ -87,13 +87,14 @@ class SyncWindow(QMainWindow):
         """Метод останавливает цикл синхронизации"""
         self.pb_start.setEnabled(True)
         self.pb_stop.setEnabled(False)
-        logger.info("Синхронизация завершена")
+        logger.info(LANGUAGE['sync_end'][CONFIGURE['language']])
         self.loop = False
 
     def on_tray_icon_activated(self, reason) -> None:
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore
             self.show()
 
+    @staticmethod
     def exit_program(self) -> None:
         """Метод закрывает окно программы"""
         json.dump(CONFIGURE, open('config.json', 'w'), indent=4)
