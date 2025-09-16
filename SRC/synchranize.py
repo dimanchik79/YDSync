@@ -185,4 +185,3 @@ class SyncWindow(QMainWindow):
             if self.loop:
                 self.l_time.setText(get_time(self.sync_time))
                 self.sync_time += 1
-    
