@@ -16,9 +16,10 @@ class YandexDiskSync:
         self.configure = configure
         self.language = language
 
-        self.local_folder = Path(self.configure.get('local'))
-        self.cloud_folder = self.configure.get('yddir')
-        self.token = self.configure.get('token')
+        self.local_folder = Path(self.configure['local'])
+        
+        self.cloud_folder = self.configure['yddir']
+        self.token = self.configure['token']
 
         # Создаем локальную папку если не существует
         self.local_folder.mkdir(parents=True, exist_ok=True)
@@ -44,7 +45,7 @@ class YandexDiskSync:
             return True
 
         # Проверка расширений
-        if path.suffix.lower() in self.configure.get('ignoreextensions'):
+        if path.suffix.lower() in self.configure['ignoreextensions']:
             return True
 
         return False
@@ -127,7 +128,7 @@ class YandexDiskSync:
                 # Получаем список файлов в облаке
                 cloud_files = {}
                 for item in self.y.listdir(self.cloud_folder, recursive=True):
-                    if not item.path.endswith('/'):  # Это файл, а не папка
+                    if not str(item.path).endswith('/'):  # Это файл, а не папка
                         cloud_files[item.path] = item.modified
 
                 # Скачиваем новые/измененные файлы
@@ -187,7 +188,7 @@ class FileChangeHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        src_path = Path(event.src_path)
+        src_path = Path(str(event.src_path))
         if self.sync_service.is_ignored(src_path):
             return
 
