@@ -19,6 +19,7 @@ LANGUAGE = {
     'add_files': {'ru': 'Добавить файлы', 'en': 'Add files'},
     'sync_begin': {'ru': 'Синхронизация началась', 'en': 'Synchronization started'},
     'sync_end': {'ru': 'Синхронизация завершена', 'en': 'Synchronization ended'},
+    'token_error': {'ru': 'Неверный токен доступа', 'en': 'Invalid access token'},
 }
 
 

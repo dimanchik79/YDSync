@@ -8,6 +8,7 @@ from pathlib import Path
 import logging
 from logging.handlers import RotatingFileHandler
 
+import yadisk
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
 
@@ -79,9 +80,25 @@ class SyncWindow(QMainWindow):
         """Метод запускает цикл синхронизации"""
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
-        logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
+        msg = LANGUAGE['sync_begin'][CONFIGURE['language']]
+        logger.info(msg)
+        self.l_prompt.setText(msg)
         self.loop = True
         self.sync_time = 0
+
+        # Инициализируем клиент Яндекс.Диска
+        self.y = yadisk.YaDisk(token=CONFIGURE['token'])
+
+        # Проверяем подключение
+        if not self.y.check_token():
+            errmsg = LANGUAGE['token_error'][CONFIGURE['language']]
+            logger.error(errmsg)
+            self.l_prompt.setText(errmsg)
+            return
+
+        # Создаем папку в облаке если не существует
+        if not self.y.exists(CONFIGURE['yddir']):
+            self.y.mkdir(CONFIGURE['yddir'])
 
     def stop_sync(self) -> None:
         """Метод останавливает цикл синхронизации"""
