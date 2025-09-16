@@ -5,18 +5,20 @@ from pathlib import Path
 from datetime import datetime
 
 import yadisk
-from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-
-from synchranize import CONFIGURE, logger
 
 class YandexDiskSync:
     """Класс для синхронизации с Яндекс.Диском"""
 
-    def __init__(self):
-        self.local_folder = Path(CONFIGURE.get('local'))
-        self.cloud_folder = CONFIGURE.get('yddir')
-        self.token = CONFIGURE.get('token')
+    def __init__(self, window, logger, configure: dict, language: dict):
+        self.window = window
+        self.logger = logger
+        self.configure = configure
+        self.language = language
+
+        self.local_folder = Path(self.configure.get('local'))
+        self.cloud_folder = self.configure.get('yddir')
+        self.token = self.configure.get('token')
 
         # Создаем локальную папку если не существует
         self.local_folder.mkdir(parents=True, exist_ok=True)
@@ -26,24 +28,23 @@ class YandexDiskSync:
 
         # Проверяем подключение
         if not self.y.check_token():
-            logger.error("Неверный токен Яндекс.Диска!")
+            self.logger.error("Неверный токен Яндекс.Диска!")
             raise ValueError("Invalid Yandex.Disk token")
 
         # Создаем папку в облаке если не существует
-        if not self.y.exists(CONFIGURE['yddir']):
-            self.y.mkdir(CONFIGURE['yddir'])
+        if not self.y.exists(self.configure['yddir']):
+            self.y.mkdir(self.configure['yddir'])
 
         self.sync_lock = threading.Lock()
         self.running = False
 
-    @staticmethod
-    def is_ignored(path: Path) -> bool:
+    def is_ignored(self, path: Path) -> bool:
         """Проверяет, нужно ли игнорировать файл/папку"""
         if path.name.startswith('.'):
             return True
 
         # Проверка расширений
-        if path.suffix.lower() in CONFIGURE.get('ignoreextensions'):
+        if path.suffix.lower() in self.configure.get('ignoreextensions'):
             return True
 
         return False
@@ -63,31 +64,30 @@ class YandexDiskSync:
                 self.y.mkdir(parent_dir)
 
             self.y.upload(str(local_path), target_cloud_path, overwrite=True)
-            logger.info(f"Загружен: {local_path} -> {target_cloud_path}")
+            self.logger.info(f"Загружен: {local_path} -> {target_cloud_path}")
 
         except Exception as e:
-            logger.error(f"Ошибка загрузки {local_path}: {e}")
+            self.logger.error(f"Ошибка загрузки {local_path}: {e}")
 
     def download_file(self, cloud_path: str, local_path: Path):
         """Скачивает файл из облака"""
         try:
             local_path.parent.mkdir(parents=True, exist_ok=True)
             self.y.download(cloud_path, str(local_path))
-            logger.info(f"Скачан: {cloud_path} -> {local_path}")
+            self.logger.info(f"Скачан: {cloud_path} -> {local_path}")
 
         except Exception as e:
-            logger.error(f"Ошибка скачивания {cloud_path}: {e}")
+            self.logger.error(f"Ошибка скачивания {cloud_path}: {e}")
 
     def delete_cloud_file(self, cloud_path: str):
         """Удаляет файл из облака"""
         try:
             self.y.remove(cloud_path)
-            logger.info(f"Удален из облака: {cloud_path}")
+            self.logger.info(f"Удален из облака: {cloud_path}")
         except Exception as e:
-            logger.error(f"Ошибка удаления из облака {cloud_path}: {e}")
+            self.logger.error(f"Ошибка удаления из облака {cloud_path}: {e}")
 
-    @staticmethod
-    def delete_local_file(local_path: Path):
+    def delete_local_file(self, local_path: Path):
         """Удаляет локальный файл"""
         try:
             if local_path.exists():
@@ -96,9 +96,9 @@ class YandexDiskSync:
                 else:
                     import shutil
                     shutil.rmtree(local_path)
-                logger.info(f"Удален локально: {local_path}")
+                self.logger.info(f"Удален локально: {local_path}")
         except Exception as e:
-            logger.error(f"Ошибка удаления локального файла {local_path}: {e}")
+            self.logger.error(f"Ошибка удаления локального файла {local_path}: {e}")
 
     def sync_local_to_cloud(self):
         """Синхронизация локальных изменений в облако"""
@@ -116,9 +116,9 @@ class YandexDiskSync:
                         if not self.is_ignored(local_file):
                             self.upload_file(local_file)
 
-                logger.info("Синхронизация лок->облако завершена")
+                self.logger.info("Синхронизация лок->облако завершена")
             except Exception as e:
-                logger.error(f"Ошибка синхронизации лок->облако: {e}")
+                self.logger.error(f"Ошибка синхронизации лок->облако: {e}")
 
     def sync_cloud_to_local(self):
         """Синхронизация облачных изменений на локальный диск"""
@@ -159,21 +159,25 @@ class YandexDiskSync:
                         if not self.y.exists(cloud_path):
                             self.delete_local_file(local_path)
 
-                logger.info("Синхронизация облако->лок завершена")
+                self.logger.info("Синхронизация облако->лок завершена")
             except Exception as e:
-                logger.error(f"Ошибка синхронизации облако->лок: {e}")
+                self.logger.error(f"Ошибка синхронизации облако->лок: {e}")
 
     def full_sync(self):
         """Полная двусторонняя синхронизация"""
-        logger.info("Запуск полной синхронизации...")
+        self.logger.info("Запуск полной синхронизации...")
         self.sync_local_to_cloud()
         self.sync_cloud_to_local()
-        logger.info("Полная синхронизация завершена")
+        self.logger.info("Полная синхронизация завершена")
+
 
 class FileChangeHandler(FileSystemEventHandler):
     """Обработчик изменений файловой системы"""
 
-    def __init__(self, sync_service):
+    def __init__(self, window, sync_service, logger):
+        super().__init__()
+        self.window = window
+        self.logger = logger
         self.sync_service = sync_service
         self.debounce_timer = None
         self.debounce_time = 2  # секунды
@@ -199,48 +203,4 @@ class FileChangeHandler(FileSystemEventHandler):
         try:
             self.sync_service.sync_local_to_cloud()
         except Exception as e:
-            logger.error(f"Ошибка в обработчике изменений: {e}")
-
-def main():
-    """Основная функция программы"""
-    try:
-        # Инициализация сервиса синхронизации
-        sync_service = YandexDiskSync()
-
-        # Первоначальная синхронизация
-        sync_service.full_sync()
-
-        # Настройка наблюдателя за файлами
-        event_handler = FileChangeHandler(sync_service)
-        observer = Observer()
-        observer.schedule(event_handler, str(sync_service.local_folder), recursive=True)
-        observer.start()
-
-        logger.info(f"Служба синхронизации запущена. Отслеживается папка: {sync_service.local_folder}")
-        logger.info(f"Облачная папка: {sync_service.cloud_folder}")
-
-        # Основной цикл
-        sync_interval = CONFIGURE.get('sync_interval')
-        sync_service.running = True
-
-        try:
-            while sync_service.running:
-                # Периодическая полная синхронизация
-                sync_service.full_sync()
-                time.sleep(sync_interval)
-
-        except KeyboardInterrupt:
-            logger.info("Получен сигнал прерывания")
-        finally:
-            observer.stop()
-            observer.join()
-            logger.info("Служба синхронизации остановлена")
-
-    except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
-        return 1
-
-    return 0
-
-if __name__ == "__main__":
-    exit(main())
+            self.logger.error(f"Ошибка в обработчике изменений: {e}")

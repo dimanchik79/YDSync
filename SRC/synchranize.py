@@ -1,20 +1,21 @@
 import json
 import sys
-import threading
-import time
-
-from pathlib import Path
 
 import logging
+import threading
+import time
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-import yadisk
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
+from watchdog.observers import Observer
 
 from SRC.config import LANGUAGE
 from SRC.utils import get_time
 from SRC.config import tray_menu_style
+
+from SRC.services import YandexDiskSync, FileChangeHandler
 
 CONFIGURE = json.load(open("config.json", "r"))
 
@@ -39,9 +40,12 @@ class SyncWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
 
+        self.observer = None
+        self.event_handler = None
+        self.sync_service = None
         self.loop = False # Запуск цикла синхронизации
         self.sync_time = 0 # Время последней синхронизации
-        
+
         uic.loadUi("GUI/mainwindow.ui", self)
         self.setFixedSize(699, 450)
 
@@ -80,32 +84,32 @@ class SyncWindow(QMainWindow):
         """Метод запускает цикл синхронизации"""
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
-        msg = LANGUAGE['sync_begin'][CONFIGURE['language']]
-        logger.info(msg)
-        self.l_prompt.setText(msg)
         self.loop = True
         self.sync_time = 0
 
-        # Инициализируем клиент Яндекс.Диска
-        self.y = yadisk.YaDisk(token=CONFIGURE['token'])
+        # Создание сервиса синхронизации
+        self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
 
-        # Проверяем подключение
-        if not self.y.check_token():
-            errmsg = LANGUAGE['token_error'][CONFIGURE['language']]
-            logger.error(errmsg)
-            self.l_prompt.setText(errmsg)
-            return
+        # Настройка наблюдателя за файлами
+        self.event_handler = FileChangeHandler(self, self.sync_service, logger)
+        self.observer = Observer()
+        self.observer.schedule(self.event_handler, str(self.sync_service.local_folder), recursive=True)
+        self.observer.start()
 
-        # Создаем папку в облаке если не существует
-        if not self.y.exists(CONFIGURE['yddir']):
-            self.y.mkdir(CONFIGURE['yddir'])
+        msg = LANGUAGE['sync_begin'][CONFIGURE['language']]
+        logger.info(msg)
+        self.l_prompt.setText(msg)
 
     def stop_sync(self) -> None:
         """Метод останавливает цикл синхронизации"""
         self.pb_start.setEnabled(True)
         self.pb_stop.setEnabled(False)
-        logger.info(LANGUAGE['sync_end'][CONFIGURE['language']])
         self.loop = False
+        self.observer.stop()
+        self.observer.join()
+        msg = LANGUAGE['sync_end'][CONFIGURE['language']]
+        logger.info(msg)
+        self.l_prompt.setText(msg)
 
     def on_tray_icon_activated(self, reason) -> None:
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore
@@ -181,6 +185,8 @@ class SyncWindow(QMainWindow):
             if self.loop:
                 self.l_time.setText(get_time(self.sync_time))
                 self.sync_time += 1
+                if (self.sync_time % CONFIGURE['timesync']) == 0:
+                    self.sync_service.full_sync()
 
 
 
