@@ -13,7 +13,7 @@ if not path.exists('config.json'):
 
 
 def main():
-    """Запуск приложения"""
+    """Запуск GUI приложения"""
     app = QtWidgets.QApplication(sys.argv)
     window = SyncWindow()
     window.show()

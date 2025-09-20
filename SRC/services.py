@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 
 import yadisk
+
 from watchdog.events import FileSystemEventHandler
 
 class YandexDiskSync:
@@ -42,11 +43,9 @@ class YandexDiskSync:
         """Проверяет, нужно ли игнорировать файл/папку"""
         if path.name.startswith('.'):
             return True
-
         # Проверка расширений
         if path.suffix.lower() in self.configure['ignoreextensions']:
             return True
-
         return False
 
     def upload_file(self, local_path: Path):
@@ -54,7 +53,6 @@ class YandexDiskSync:
         try:
             if self.is_ignored(local_path):
                 return
-
             relative_path = local_path.relative_to(self.local_folder)
             target_cloud_path = f"{self.cloud_folder}/{relative_path}"
 
@@ -166,8 +164,8 @@ class YandexDiskSync:
     def full_sync(self):
         """Полная двусторонняя синхронизация"""
         self.logger.info("Запуск полной синхронизации...")
-        self.sync_local_to_cloud()
-        self.sync_cloud_to_local()
+        threading.Thread(target=self.sync_local_to_cloud, args=(), daemon=True).start()
+        threading.Thread(target=self.sync_cloud_to_local, args=(), daemon=True).start()
         self.logger.info("Полная синхронизация завершена")
 
 

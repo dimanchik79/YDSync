@@ -4,11 +4,13 @@ import sys
 import logging
 import threading
 import time
+
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
+
 from watchdog.observers import Observer
 
 from SRC.config import LANGUAGE
@@ -42,12 +44,20 @@ class SyncWindow(QMainWindow):
 
         self.observer = None
         self.event_handler = None
-        self.sync_service = None
+
+        # Создание сервиса синхронизации
+        self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
+
+        # Создание наблюдателя за изменениями в файлах
+        self.event_handler = FileChangeHandler(self, self.sync_service, logger)
+        self.observer = Observer()
+        self.observer.schedule(self.event_handler, str(self.sync_service.local_folder), recursive=True)
+
         self.loop = False # Запуск цикла синхронизации
-        self.sync_time = 0 # Время последней синхронизации
+        self.sync_time = 0 # Таймер синхронизации
 
         uic.loadUi("GUI/mainwindow.ui", self)
-        self.setFixedSize(699, 450)
+        self.setFixedSize(699, 393)
 
         # Tray menu
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -84,16 +94,11 @@ class SyncWindow(QMainWindow):
         """Метод запускает цикл синхронизации"""
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
+
         self.loop = True
         self.sync_time = 0
 
-        # Создание сервиса синхронизации
-        self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
-
-        # Настройка наблюдателя за файлами
-        self.event_handler = FileChangeHandler(self, self.sync_service, logger)
-        self.observer = Observer()
-        self.observer.schedule(self.event_handler, str(self.sync_service.local_folder), recursive=True)
+        # Запуск наблюдателя
         self.observer.start()
 
         msg = LANGUAGE['sync_begin'][CONFIGURE['language']]
@@ -138,8 +143,6 @@ class SyncWindow(QMainWindow):
         self.l_logsize.setText(LANGUAGE['l_logsize'][language])
         self.l_kb.setText(LANGUAGE['l_kb'][language])
         self.pb_openlog.setText(LANGUAGE['pb_openlog'][language])
-        self.l_timesync.setText(LANGUAGE['l_timesync'][language])
-        self.l_sec.setText(LANGUAGE['l_sec'][language])
         self.pb_start.setText(LANGUAGE['pb_start'][language])
         self.pb_stop.setText(LANGUAGE['pb_stop'][language])
         CONFIGURE['language'] = language
@@ -163,13 +166,13 @@ class SyncWindow(QMainWindow):
         self.le_ignoreextension.setText(extensions)
         self.le_ignorefiles.setText(files)
         self.le_logsize.setText(str(CONFIGURE['logsize']))
-        self.le_timesync.setText(str(CONFIGURE['timesync']))
 
     def add_folder(self) -> None:
         """Метод добавляет папку для синхронизации"""
         local = QFileDialog.getExistingDirectory(self, LANGUAGE['add_folder'][CONFIGURE['language']], "")
-        CONFIGURE['local'] = local
-        self.le_local.setText(local)
+        if local:
+           CONFIGURE['local'] = local
+           self.le_local.setText(local)
 
     def add_files(self) -> None:
         files = QFileDialog.getOpenFileNames(self, LANGUAGE['add_files'][CONFIGURE['language']], "")[0]
@@ -185,3 +188,5 @@ class SyncWindow(QMainWindow):
             if self.loop:
                 self.l_time.setText(get_time(self.sync_time))
                 self.sync_time += 1
+                if self.sync_time % 3 == 0:
+                    self.sync_service.full_sync()

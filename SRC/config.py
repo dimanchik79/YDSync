@@ -9,8 +9,6 @@ LANGUAGE = {
     'l_logsize': {'ru': 'Размер лог-файла не более:', 'en': 'The size of the log file:'},
     'l_kb': {'ru': '(1 - 1024) КБ', 'en': '(1 - 1024) Kb'},
     'pb_openlog': {'ru': 'Открыть лог-файл', 'en': 'Open log-file'},
-    'l_timesync': {'ru': 'Синхронизировать через:', 'en': 'Synchronization time:'},
-    'l_sec': {'ru': '(10 - 120) СЕК', 'en': '(10 - 120) SEC'},
     'pb_start': {'ru': 'Начать синхронизацию', 'en': 'Start sync'},
     'pb_stop': {'ru': 'Остановить', 'en': 'Stop sync'},
     'exit': {'ru': 'Выход', 'en': 'Exit'},
@@ -31,7 +29,6 @@ CONFIG_DEFAULT = {
     'ignoreextensions': [],
     'ignorefiles': [],
     'logsize': 1024,
-    'timesync': 60,
 }
 
 
