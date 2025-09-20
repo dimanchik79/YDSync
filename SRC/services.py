@@ -173,12 +173,11 @@ class FileChangeHandler(FileSystemEventHandler):
     """Обработчик изменений файловой системы"""
 
     def __init__(self, window, sync_service, logger):
-        super().__init__()
         self.window = window
         self.logger = logger
         self.sync_service = sync_service
         self.debounce_timer = None
-        self.debounce_time = 2  # секунды
+        self.debounce_time = 5  # секунды
 
     def on_any_event(self, event):
         """Обрабатывает любое изменение файловой системы"""
@@ -199,6 +198,6 @@ class FileChangeHandler(FileSystemEventHandler):
     def trigger_sync(self):
         """Запускает синхронизацию после задержки"""
         try:
-            self.sync_service.sync_local_to_cloud()
+            self.sync_service.full_sync()
         except Exception as e:
             self.logger.error(f"Ошибка в обработчике изменений: {e}")

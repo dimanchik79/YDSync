@@ -169,15 +169,27 @@ class SyncWindow(QMainWindow):
 
     def add_folder(self) -> None:
         """Метод добавляет папку для синхронизации"""
-        local = QFileDialog.getExistingDirectory(self, LANGUAGE['add_folder'][CONFIGURE['language']], "")
+        local = QFileDialog.getExistingDirectory(self,
+                                                 LANGUAGE['add_folder'][CONFIGURE['language']],
+                                                 "")
         if local:
-           CONFIGURE['local'] = local
-           self.le_local.setText(local)
+            CONFIGURE['local'] = local
+            yddir = "/" + Path(local).name
+            self.le_local.setText(local)
+            self.le_yddir.setText(yddir)
+            if self.sync_service.y.exists(yddir):
+                self.l_prompt.setText(LANGUAGE['yddir_exists'][CONFIGURE['language']])
 
     def add_files(self) -> None:
-        files = QFileDialog.getOpenFileNames(self, LANGUAGE['add_files'][CONFIGURE['language']], "")[0]
+        default_path = Path(CONFIGURE['local']) if CONFIGURE['local'] else ''
+        files = QFileDialog.getOpenFileNames(self,
+                                             LANGUAGE['add_files'][CONFIGURE['language']],
+                                             directory=str(default_path))[0]
         if files:
-            self.le_ignorefiles.setText(', '.join(Path(path).name for path in files))
+            files_name = [Path(path).name for path in files]
+            print(files_name)
+            CONFIGURE['ignorefiles'] = files_name
+            self.le_ignorefiles.setText(', '.join(name for name in files_name))
 
     def save_config(self) -> None:
         CONFIGURE['token'] = self.le_token.text() if self.le_token.text() else ''
@@ -188,5 +200,3 @@ class SyncWindow(QMainWindow):
             if self.loop:
                 self.l_time.setText(get_time(self.sync_time))
                 self.sync_time += 1
-                if self.sync_time % 3 == 0:
-                    self.sync_service.full_sync()
