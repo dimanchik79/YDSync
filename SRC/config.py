@@ -18,8 +18,12 @@ LANGUAGE = {
     'sync_begin': {'ru': 'Синхронизация началась', 'en': 'Synchronization started'},
     'sync_end': {'ru': 'Синхронизация завершена', 'en': 'Synchronization ended'},
     'token_error': {'ru': 'Неверный токен доступа', 'en': 'Invalid access token'},
-    'yddir_exists': {'ru': 'Внимание! Такая папка уже существует на Яндекс.Диске',
-                     'en': 'Warning! This folder already exists on Yandex.Disk'},
+    'yddir_exists': {'ru': 'Внимание! Такая папка уже существует на Яндекс.Диске. Продолжить?',
+                     'en': 'Warning! This folder already exists on Yandex.Disk. Continue?'},
+    'error': {'ru': 'Ошибка подключения к Яндекс.Диску. Проверте пути.',
+              'en': 'Error connecting to Yandex.Disk. Check paths.'},
+    'warning': {'ru': 'Внимание!', 'en': 'Warning!'},
+
 }
 
 

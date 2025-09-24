@@ -9,7 +9,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from PyQt5 import uic, QtWidgets, QtGui
-from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
+from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog, QDialog
 
 from watchdog.observers import Observer
 
@@ -36,28 +36,30 @@ logging.basicConfig(
 
 logger = logging.getLogger('YandexDiskSync')
 
+class YesNoDialog(QDialog):
+    def __init__(self, text: str) -> None:
+        super().__init__()
+        uic.loadUi("GUI/yesno.ui", self)
+        self.setFixedSize(400, 132)
+        self.prompt.setText(text)
+
+    def get_result(self):
+        return self.exec_() == QDialog.Accepted
 
 class SyncWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
 
+        self.sync_service = None
         self.observer = None
         self.event_handler = None
-
-        # Создание сервиса синхронизации
-        self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
-
-        # Создание наблюдателя за изменениями в файлах
-        self.event_handler = FileChangeHandler(self, self.sync_service, logger)
-        self.observer = Observer()
-        self.observer.schedule(self.event_handler, str(self.sync_service.local_folder), recursive=True)
 
         self.loop = False # Запуск цикла синхронизации
         self.sync_time = 0 # Таймер синхронизации
 
         uic.loadUi("GUI/mainwindow.ui", self)
-        self.setFixedSize(699, 393)
+        self.setFixedSize(699, 531)
 
         # Tray menu
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -92,6 +94,19 @@ class SyncWindow(QMainWindow):
 
     def start_sync(self) -> None:
         """Метод запускает цикл синхронизации"""
+
+        self.create_sync_service()
+
+        if not self.sync_service:
+            return
+        else:
+            self.sync_service.y.exists(self.le_yddir.text())
+            yesno = YesNoDialog(LANGUAGE['yddir_exists'][CONFIGURE['language']])
+            yesno.setWindowTitle(LANGUAGE['warning'][CONFIGURE['language']])
+
+            yesno.show()
+            yesno.exec_()
+
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
 
@@ -130,6 +145,22 @@ class SyncWindow(QMainWindow):
         """Метод вызывает метод выхода из программы"""
         event.ignore()  # Не вызывать метод closeEvent
         self.hide()
+
+    def create_sync_service(self) -> None:
+        # Создание сервиса синхронизации
+        try:
+            self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
+            # Создание наблюдателя за изменениями в файлах
+            self.event_handler = FileChangeHandler(self, self.sync_service, logger)
+            self.observer = Observer()
+            self.observer.schedule(self.event_handler, str(self.sync_service.local_folder), recursive=True)
+        except Exception as e:
+            if e == 'Token is not valid':
+                self.l_prompt.setText(LANGUAGE['token_error'][CONFIGURE['language']])
+                logger.error(LANGUAGE['token_error'][CONFIGURE['language']])
+            else:
+                self.l_prompt.setText(LANGUAGE['error'][CONFIGURE['language']])
+                logger.error(LANGUAGE['error'][CONFIGURE['language']])
 
     def language_set(self, language: str) -> None:
         """Метод устанавливает язык интерфейса"""
@@ -177,8 +208,6 @@ class SyncWindow(QMainWindow):
             yddir = "/" + Path(local).name
             self.le_local.setText(local)
             self.le_yddir.setText(yddir)
-            if self.sync_service.y.exists(yddir):
-                self.l_prompt.setText(LANGUAGE['yddir_exists'][CONFIGURE['language']])
 
     def add_files(self) -> None:
         default_path = Path(CONFIGURE['local']) if CONFIGURE['local'] else ''
