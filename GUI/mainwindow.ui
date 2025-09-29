@@ -181,10 +181,9 @@ background-color: #007acc;
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">QLineEdit {
-color: rgb(153, 193, 241);
+     <string notr="true">color: rgb(153, 193, 241);
 border: 1px solid white;
-}</string>
+</string>
     </property>
     <property name="inputMethodHints">
      <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
@@ -206,10 +205,9 @@ border: 1px solid white;
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">QLineEdit {
-color: rgb(153, 193, 241);
+     <string notr="true">color: rgb(153, 193, 241);
 border: 1px solid white;
-}</string>
+</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pb_helptoten">
@@ -261,10 +259,8 @@ border: 2px solid  rgb(153, 193, 241);</string>
      <string/>
     </property>
     <property name="styleSheet">
-     <string notr="true">QLineEdit {
-color: rgb(153, 193, 241);
-border: 1px solid white;
-}</string>
+     <string notr="true">color: rgb(153, 193, 241);
+border: 1px solid white;</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="le_ignoreextension">
@@ -277,10 +273,8 @@ border: 1px solid white;
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">QLineEdit {
-color: rgb(153, 193, 241);
-border: 1px solid white;
-}</string>
+     <string notr="true">color: rgb(153, 193, 241);
+border: 1px solid white;</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pb_ignorefiles">
@@ -343,10 +337,8 @@ border: 2px solid  rgb(153, 193, 241);</string>
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">QLineEdit {
-color: rgb(153, 193, 241);
-border: 1px solid white;
-}</string>
+     <string notr="true">color: rgb(153, 193, 241);
+border: 1px solid white;</string>
     </property>
     <property name="inputMethodHints">
      <set>Qt::ImhNone</set>

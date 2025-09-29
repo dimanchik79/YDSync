@@ -20,9 +20,10 @@ LANGUAGE = {
     'token_error': {'ru': 'Неверный токен доступа', 'en': 'Invalid access token'},
     'yddir_exists': {'ru': 'Внимание! Такая папка уже существует на Яндекс.Диске. Продолжить?',
                      'en': 'Warning! This folder already exists on Yandex.Disk. Continue?'},
-    'error': {'ru': 'Ошибка подключения к Яндекс.Диску. Проверте пути.',
-              'en': 'Error connecting to Yandex.Disk. Check paths.'},
+    'error': {'ru': 'Ошибка подключения к Яндекс.Диску. Проверьте настройки.',
+              'en': 'Error connecting to Yandex.Disk. Check the settings.'},
     'warning': {'ru': 'Внимание!', 'en': 'Warning!'},
+    'connect': {'ru': 'Подключение к Яндекс.Диску...', 'en': 'Connecting to Yandex.Disk...'},
 
 }
 
@@ -56,3 +57,10 @@ tray_menu_style = """
                 color: #7f8c8d;
             }
         """
+
+qlineedit_style_error = """color: rgb(153, 193, 241); border: 1px solid red;"""
+
+qlineedit_style = """color: rgb(153, 193, 241); border: 1px solid white;"""
+
+
+windows_drive_pattern = r'^[a-zA-Z]:[\\/]'

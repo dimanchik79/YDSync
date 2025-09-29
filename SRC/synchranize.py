@@ -1,4 +1,6 @@
 import json
+import re
+import platform
 import sys
 
 import logging
@@ -15,7 +17,7 @@ from watchdog.observers import Observer
 
 from SRC.config import LANGUAGE
 from SRC.utils import get_time
-from SRC.config import tray_menu_style
+from SRC.config import tray_menu_style, qlineedit_style_error, qlineedit_style, windows_drive_pattern
 
 from SRC.services import YandexDiskSync, FileChangeHandler
 
@@ -85,6 +87,8 @@ class SyncWindow(QMainWindow):
         self.pb_stop.clicked.connect(self.stop_sync)
         self.pb_ignorefiles.clicked.connect(self.add_files)
 
+        self.le_local.textChanged.connect(lambda: self.le_local.setStyleSheet(qlineedit_style))
+
         # Buttons
         self.pb_start.setEnabled(True)
         self.pb_stop.setEnabled(False)
@@ -95,17 +99,18 @@ class SyncWindow(QMainWindow):
     def start_sync(self) -> None:
         """Метод запускает цикл синхронизации"""
 
-        self.create_sync_service()
+        self.l_prompt.setText(LANGUAGE['connect'][CONFIGURE['language']])
 
-        if not self.sync_service:
-            return
+        path = Path(self.le_local.text())
+        if re.match(windows_drive_pattern, str(path)) and platform.system() == 'Windows':
+            if path.exists():
+                self.create_sync_service()
         else:
-            self.sync_service.y.exists(self.le_yddir.text())
-            yesno = YesNoDialog(LANGUAGE['yddir_exists'][CONFIGURE['language']])
-            yesno.setWindowTitle(LANGUAGE['warning'][CONFIGURE['language']])
-
-            yesno.show()
-            yesno.exec_()
+            self.le_local.setStyleSheet(qlineedit_style_error)
+            self.le_local.setFocus()
+            self.l_prompt.setText(LANGUAGE['error'][CONFIGURE['language']])
+            logger.error(LANGUAGE['error'][CONFIGURE['language']])
+            return
 
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
@@ -153,9 +158,9 @@ class SyncWindow(QMainWindow):
             # Создание наблюдателя за изменениями в файлах
             self.event_handler = FileChangeHandler(self, self.sync_service, logger)
             self.observer = Observer()
-            self.observer.schedule(self.event_handler, str(self.sync_service.local_folder), recursive=True)
+            self.observer.schedule(self.event_handler, str(self.le_local.text()), recursive=True)
         except Exception as e:
-            if e == 'Token is not valid':
+            if e == 'Invalid Yandex.Disk token':
                 self.l_prompt.setText(LANGUAGE['token_error'][CONFIGURE['language']])
                 logger.error(LANGUAGE['token_error'][CONFIGURE['language']])
             else:

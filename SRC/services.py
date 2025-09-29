@@ -17,8 +17,8 @@ class YandexDiskSync:
         self.language = language
 
         self.local_folder = Path(self.configure['local'])
-        
         self.cloud_folder = self.configure['yddir']
+
         self.token = self.configure['token']
 
         # Создаем локальную папку если не существует
