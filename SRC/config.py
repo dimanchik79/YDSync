@@ -24,7 +24,6 @@ LANGUAGE = {
               'en': 'Error connecting to Yandex.Disk. Check the settings.'},
     'warning': {'ru': 'Внимание!', 'en': 'Warning!'},
     'connect': {'ru': 'Подключение к Яндекс.Диску...', 'en': 'Connecting to Yandex.Disk...'},
-
 }
 
 

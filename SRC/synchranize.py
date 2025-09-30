@@ -101,16 +101,21 @@ class SyncWindow(QMainWindow):
 
         self.l_prompt.setText(LANGUAGE['connect'][CONFIGURE['language']])
 
-        path = Path(self.le_local.text())
-        if re.match(windows_drive_pattern, str(path)) and platform.system() == 'Windows':
-            if path.exists():
+        local = Path(self.le_local.text())
+        try:
+            win_path = re.match(windows_drive_pattern, str(local))
+            correct_path = local.exists()
+            if (not win_path and platform.system() == 'Windows') or not correct_path:
+                self.le_local.setStyleSheet(qlineedit_style_error)
+                self.l_prompt.setText(LANGUAGE['error'][CONFIGURE['language']])
+                return
+            else:
                 self.create_sync_service()
-        else:
+        except Exception as e:
             self.le_local.setStyleSheet(qlineedit_style_error)
-            self.le_local.setFocus()
             self.l_prompt.setText(LANGUAGE['error'][CONFIGURE['language']])
-            logger.error(LANGUAGE['error'][CONFIGURE['language']])
             return
+
 
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
