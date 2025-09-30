@@ -9,6 +9,7 @@ import time
 
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from threading import Thread
 
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog, QDialog
@@ -110,12 +111,13 @@ class SyncWindow(QMainWindow):
                 self.l_prompt.setText(LANGUAGE['error'][CONFIGURE['language']])
                 return
             else:
+                self.save_config()
                 self.create_sync_service()
         except Exception as e:
+            logger.error(LANGUAGE['error'][CONFIGURE['language']])
             self.le_local.setStyleSheet(qlineedit_style_error)
             self.l_prompt.setText(LANGUAGE['error'][CONFIGURE['language']])
             return
-
 
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
@@ -126,9 +128,9 @@ class SyncWindow(QMainWindow):
         # Запуск наблюдателя
         self.observer.start()
 
-        msg = LANGUAGE['sync_begin'][CONFIGURE['language']]
-        logger.info(msg)
-        self.l_prompt.setText(msg)
+        logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
+        self.l_prompt.setText(LANGUAGE['sync_begin'][CONFIGURE['language']])
+        self.sync_service.full_sync()
 
     def stop_sync(self) -> None:
         """Метод останавливает цикл синхронизации"""
@@ -137,9 +139,8 @@ class SyncWindow(QMainWindow):
         self.loop = False
         self.observer.stop()
         self.observer.join()
-        msg = LANGUAGE['sync_end'][CONFIGURE['language']]
-        logger.info(msg)
-        self.l_prompt.setText(msg)
+        logger.info(LANGUAGE['sync_end'][CONFIGURE['language']])
+        self.l_prompt.setText(LANGUAGE['sync_end'][CONFIGURE['language']])
 
     def on_tray_icon_activated(self, reason) -> None:
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore
@@ -148,7 +149,6 @@ class SyncWindow(QMainWindow):
     def exit_program(self) -> None:
         """Метод закрывает окно программы"""
         self.save_config()
-        json.dump(CONFIGURE, open('config.json', 'w'), indent=4)
         sys.exit()
 
     def closeEvent(self, event) -> None:
@@ -216,6 +216,7 @@ class SyncWindow(QMainWindow):
         if local:
             CONFIGURE['local'] = local
             yddir = "/" + Path(local).name
+            CONFIGURE['yddir'] = yddir
             self.le_local.setText(local)
             self.le_yddir.setText(yddir)
 
@@ -226,12 +227,15 @@ class SyncWindow(QMainWindow):
                                              directory=str(default_path))[0]
         if files:
             files_name = [Path(path).name for path in files]
-            print(files_name)
             CONFIGURE['ignorefiles'] = files_name
             self.le_ignorefiles.setText(', '.join(name for name in files_name))
 
     def save_config(self) -> None:
         CONFIGURE['token'] = self.le_token.text() if self.le_token.text() else ''
+        CONFIGURE['local'] = self.le_local.text() if self.le_local.text() else ''
+        CONFIGURE['yddir'] = self.le_yddir.text() if self.le_yddir.text() else ''
+        json.dump(CONFIGURE, open('config.json', 'w'), indent=4)
+
 
     def synchronize(self) -> None:
         while True:

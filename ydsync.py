@@ -7,7 +7,7 @@ from SRC.synchranize import SyncWindow
 
 from SRC.config import CONFIG_DEFAULT
 
-# загружаем конфиг
+# создание файла конфигурации
 if not path.exists('config.json'):
     json.dump(CONFIG_DEFAULT, open('config.json', 'w'), indent=4)
 
