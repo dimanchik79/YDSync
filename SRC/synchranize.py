@@ -160,6 +160,7 @@ class SyncWindow(QMainWindow):
         # Создание сервиса синхронизации
         try:
             self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
+
             # Создание наблюдателя за изменениями в файлах
             self.event_handler = FileChangeHandler(self, self.sync_service, logger)
             self.observer = Observer()

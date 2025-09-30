@@ -7,6 +7,7 @@ import yadisk
 
 from watchdog.events import FileSystemEventHandler
 
+
 class YandexDiskSync:
     """Класс для синхронизации с Яндекс.Диском"""
 
@@ -21,9 +22,6 @@ class YandexDiskSync:
 
         self.token = self.configure['token']
 
-        # Создаем локальную папку если не существует
-        self.local_folder.mkdir(parents=True, exist_ok=True)
-
         # Инициализируем клиент Яндекс.Диска
         self.y = yadisk.YaDisk(token=self.token)
 
@@ -37,7 +35,6 @@ class YandexDiskSync:
             self.y.mkdir(self.configure['yddir'])
 
         self.sync_lock = threading.Lock()
-        self.running = False
 
     def is_ignored(self, path: Path) -> bool:
         """Проверяет, нужно ли игнорировать файл/папку"""
@@ -54,7 +51,7 @@ class YandexDiskSync:
             if self.is_ignored(local_path):
                 return
             relative_path = local_path.relative_to(self.local_folder)
-            target_cloud_path = f"{self.cloud_folder}/{relative_path}"
+            target_cloud_path = f"{self.cloud_folder}/{relative_path}".replace('\\', '/')
 
             # Создаем родительские папки в облаке
             parent_dir = os.path.dirname(target_cloud_path)
@@ -106,11 +103,9 @@ class YandexDiskSync:
                 for root, dirs, files in os.walk(self.local_folder):
                     root_path = Path(root)
 
-                    # Пропускаем игнорируемые папки
-                    dirs[:] = [d for d in dirs if not self.is_ignored(root_path / d)]
-
                     for file in files:
                         local_file = root_path / file
+                        print(local_file)
                         if not self.is_ignored(local_file):
                             self.upload_file(local_file)
 
@@ -133,20 +128,7 @@ class YandexDiskSync:
                     relative_path = cloud_path[len(self.cloud_folder) + 1:]
                     local_path = self.local_folder / relative_path
 
-                    need_download = False
-
-                    if not local_path.exists():
-                        need_download = True
-                    else:
-                        # Сравниваем время модификации
-                        local_mtime = datetime.fromtimestamp(local_path.stat().st_mtime)
-                        cloud_mtime_dt = datetime.strptime(cloud_mtime, '%Y-%m-%dT%H:%M:%S%z')
-
-                        if cloud_mtime_dt > local_mtime.replace(tzinfo=cloud_mtime_dt.tzinfo):
-                            need_download = True
-
-                    if need_download and not self.is_ignored(local_path):
-                        self.download_file(cloud_path, local_path)
+                self.download_file(cloud_path, local_path)
 
                 # Удаляем локальные файлы, которых нет в облаке
                 for local_path in self.local_folder.rglob('*'):
