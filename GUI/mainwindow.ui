@@ -225,7 +225,11 @@ border-radius: 5px;
 border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
-     <string>?</string>
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>link.png</normaloff>link.png</iconset>
     </property>
    </widget>
    <widget class="QPushButton" name="pb_local">
@@ -243,7 +247,11 @@ border-radius: 5px;
 border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
-     <string>...</string>
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>localfolder.png</normaloff>localfolder.png</iconset>
     </property>
    </widget>
    <widget class="QLineEdit" name="le_yddir">
@@ -283,7 +291,7 @@ border: 1px solid white;</string>
       <x>660</x>
       <y>220</y>
       <width>31</width>
-      <height>27</height>
+      <height>151</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -292,7 +300,11 @@ border-radius: 5px;
 border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="text">
-     <string>...</string>
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>ignorefiles.png</normaloff>ignorefiles.png</iconset>
     </property>
    </widget>
    <widget class="QLabel" name="l_ignorefiles">
@@ -408,6 +420,10 @@ border: 2px solid rgb(38, 162, 105);</string>
     <property name="text">
      <string>Начать синхронизацию</string>
     </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>sync.png</normaloff>sync.png</iconset>
+    </property>
    </widget>
    <widget class="QPushButton" name="pb_stop">
     <property name="geometry">
@@ -432,6 +448,10 @@ border: 2px solid rgb(165, 29, 45);</string>
     </property>
     <property name="text">
      <string>Остановить</string>
+    </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>stop.png</normaloff>stop.png</iconset>
     </property>
    </widget>
    <widget class="QLabel" name="l_time">
@@ -474,6 +494,10 @@ border: 2px solid  rgb(153, 193, 241);</string>
     <property name="text">
      <string>Помощь</string>
     </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>help.png</normaloff>help.png</iconset>
+    </property>
    </widget>
    <widget class="QPushButton" name="pb_openlog">
     <property name="geometry">
@@ -492,13 +516,17 @@ border: 2px solid  rgb(153, 193, 241);</string>
     <property name="text">
      <string>Открыть лог-файл</string>
     </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>log.png</normaloff>log.png</iconset>
+    </property>
    </widget>
    <widget class="QTextEdit" name="le_ignorefiles">
     <property name="geometry">
      <rect>
       <x>268</x>
       <y>220</y>
-      <width>381</width>
+      <width>391</width>
       <height>151</height>
      </rect>
     </property>

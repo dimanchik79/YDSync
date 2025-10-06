@@ -228,13 +228,17 @@ class SyncWindow(QMainWindow):
                                              directory=str(default_path))[0]
         if files:
             files_name = [Path(path).name for path in files]
-            CONFIGURE['ignorefiles'] = files_name
             self.le_ignorefiles.setText(', '.join(name for name in files_name))
 
     def save_config(self) -> None:
         CONFIGURE['token'] = self.le_token.text() if self.le_token.text() else ''
         CONFIGURE['local'] = self.le_local.text() if self.le_local.text() else ''
         CONFIGURE['yddir'] = self.le_yddir.text() if self.le_yddir.text() else ''
+        files = self.le_ignorefiles.toPlainText()
+        files_names = []
+        if files:
+            files_names = [Path(path).name for path in files.split(',')]
+        CONFIGURE['ignorefiles'] = files_names
         json.dump(CONFIGURE, open('config.json', 'w'), indent=4)
 
 
