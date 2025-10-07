@@ -14,13 +14,11 @@ from threading import Thread
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog, QDialog
 
-from watchdog.observers import Observer
-
 from SRC.config import LANGUAGE
 from SRC.utils import get_time
 from SRC.config import tray_menu_style, qlineedit_style_error, qlineedit_style, windows_drive_pattern
 
-from SRC.services import YandexDiskSync, FileChangeHandler
+from SRC.service_new import RealTimeYandexDiskSync
 
 CONFIGURE = json.load(open("config.json", "r"))
 
@@ -38,16 +36,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger('YandexDiskSync')
-
-class YesNoDialog(QDialog):
-    def __init__(self, text: str) -> None:
-        super().__init__()
-        uic.loadUi("GUI/yesno.ui", self)
-        self.setFixedSize(400, 132)
-        self.prompt.setText(text)
-
-    def get_result(self):
-        return self.exec_() == QDialog.Accepted
 
 class SyncWindow(QMainWindow):
 
@@ -74,7 +62,6 @@ class SyncWindow(QMainWindow):
         exit_action.triggered.connect(self.exit_program)
         tray_menu = QMenu(self)
         tray_menu.setStyleSheet(tray_menu_style)
-
         tray_menu.addAction(show_action)
         tray_menu.addAction(exit_action)
         self.tray_icon.setContextMenu(tray_menu)
@@ -95,6 +82,7 @@ class SyncWindow(QMainWindow):
         self.pb_stop.setEnabled(False)
 
         self.set_from_config()
+
         threading.Thread(target=self.synchronize, args=(), daemon=True).start()
 
     def start_sync(self) -> None:
@@ -122,23 +110,24 @@ class SyncWindow(QMainWindow):
         self.pb_start.setEnabled(False)
         self.pb_stop.setEnabled(True)
 
-        self.loop = True
-        self.sync_time = 0
+        self.create_sync_service()
 
-        # Запуск наблюдателя
-        self.observer.start()
-
-        logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
-        self.l_prompt.setText(LANGUAGE['sync_begin'][CONFIGURE['language']])
-        self.sync_service.full_sync()
+        if self.sync_service:
+            if self.sync_service.start_sync():
+                self.loop = True
+                self.sync_time = 0
+                logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
+                self.l_prompt.setText(LANGUAGE['sync_begin'][CONFIGURE['language']])
+        else:
+            logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
+            self.l_prompt.setText(LANGUAGE['sync_begin'][CONFIGURE['language']])
 
     def stop_sync(self) -> None:
         """Метод останавливает цикл синхронизации"""
         self.pb_start.setEnabled(True)
         self.pb_stop.setEnabled(False)
         self.loop = False
-        self.observer.stop()
-        self.observer.join()
+        self.sync_service.stop_sync()
         logger.info(LANGUAGE['sync_end'][CONFIGURE['language']])
         self.l_prompt.setText(LANGUAGE['sync_end'][CONFIGURE['language']])
 
@@ -159,12 +148,7 @@ class SyncWindow(QMainWindow):
     def create_sync_service(self) -> None:
         # Создание сервиса синхронизации
         try:
-            self.sync_service = YandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
-
-            # Создание наблюдателя за изменениями в файлах
-            self.event_handler = FileChangeHandler(self, self.sync_service, logger)
-            self.observer = Observer()
-            self.observer.schedule(self.event_handler, str(self.le_local.text()), recursive=True)
+            self.sync_service = RealTimeYandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
         except Exception as e:
             if e == 'Invalid Yandex.Disk token':
                 self.l_prompt.setText(LANGUAGE['token_error'][CONFIGURE['language']])
