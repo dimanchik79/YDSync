@@ -1,7 +1,7 @@
 import os
 import threading
+import shutil
 from pathlib import Path
-from datetime import datetime
 
 import yadisk
 
@@ -40,6 +40,7 @@ class YandexDiskSync:
         """Проверяет, нужно ли игнорировать файл/папку"""
         if path.name.startswith('.'):
             return True
+
         # Проверка расширений
         if path.suffix.lower() in self.configure['ignoreextensions']:
             return True
@@ -52,6 +53,7 @@ class YandexDiskSync:
                 return
             relative_path = local_path.relative_to(self.local_folder)
             target_cloud_path = f"{self.cloud_folder}/{relative_path}".replace('\\', '/')
+            print(target_cloud_path)
 
             # Создаем родительские папки в облаке
             parent_dir = os.path.dirname(target_cloud_path)
@@ -89,7 +91,6 @@ class YandexDiskSync:
                 if local_path.is_file():
                     local_path.unlink()
                 else:
-                    import shutil
                     shutil.rmtree(local_path)
                 self.logger.info(f"Удален локально: {local_path}")
         except Exception as e:
@@ -105,43 +106,43 @@ class YandexDiskSync:
 
                     for file in files:
                         local_file = root_path / file
-                        print(local_file)
                         if not self.is_ignored(local_file):
                             self.upload_file(local_file)
-
                 self.logger.info("Синхронизация лок->облако завершена")
             except Exception as e:
                 self.logger.error(f"Ошибка синхронизации лок->облако: {e}")
 
     def sync_cloud_to_local(self):
         """Синхронизация облачных изменений на локальный диск"""
-        with self.sync_lock:
-            try:
-                # Получаем список файлов в облаке
-                cloud_files = {}
-                for item in self.y.listdir(self.cloud_folder, recursive=True):
-                    if not str(item.path).endswith('/'):  # Это файл, а не папка
-                        cloud_files[item.path] = item.modified
-
-                # Скачиваем новые/измененные файлы
-                for cloud_path, cloud_mtime in cloud_files.items():
-                    relative_path = cloud_path[len(self.cloud_folder) + 1:]
-                    local_path = self.local_folder / relative_path
-
-                self.download_file(cloud_path, local_path)
-
-                # Удаляем локальные файлы, которых нет в облаке
-                for local_path in self.local_folder.rglob('*'):
-                    if local_path.is_file() and not self.is_ignored(local_path):
-                        relative_path = local_path.relative_to(self.local_folder)
-                        cloud_path = f"{self.cloud_folder}/{relative_path}"
-
-                        if not self.y.exists(cloud_path):
-                            self.delete_local_file(local_path)
-
-                self.logger.info("Синхронизация облако->лок завершена")
-            except Exception as e:
-                self.logger.error(f"Ошибка синхронизации облако->лок: {e}")
+        # with self.sync_lock:
+        #     try:
+        #         # Получаем список файлов в облаке
+        #         cloud_files = {}
+        #         for item in self.y.listdir(self.cloud_folder, recursive=True):
+        #             print(item)
+        #             if not str(item.path).endswith('/'):  # Это файл, а не папка
+        #                 cloud_files[item.path] = item.modified
+        #
+        #         # Скачиваем новые/измененные файлы
+        #         for cloud_path, cloud_mtime in cloud_files.items():
+        #             relative_path = cloud_path[len(self.cloud_folder) + 1:]
+        #             local_path = self.local_folder / relative_path
+        #
+        #         self.download_file(cloud_path, local_path)
+        #
+        #         # # Удаляем локальные файлы, которых нет в облаке
+        #         # for local_path in self.local_folder.rglob('*'):
+        #         #     if local_path.is_file() and not self.is_ignored(local_path):
+        #         #         relative_path = local_path.relative_to(self.local_folder)
+        #         #         cloud_path = f"{self.cloud_folder}/{relative_path}".replace('\\', '/')
+        #         #
+        #         #         if not self.y.exists(cloud_path):
+        #         #             self.delete_local_file(local_path)
+        #
+        #         self.logger.info("Синхронизация облако->лок завершена")
+        #     except Exception as e:
+        #         self.logger.error(f"Ошибка синхронизации облако->лок: {e}")
+        ...
 
     def full_sync(self):
         """Полная двусторонняя синхронизация"""
