@@ -87,9 +87,6 @@ class SyncWindow(QMainWindow):
 
     def start_sync(self) -> None:
         """Метод запускает цикл синхронизации"""
-
-        self.l_prompt.setText(LANGUAGE['connect'][CONFIGURE['language']])
-
         local = Path(self.le_local.text())
         try:
             win_path = re.match(windows_drive_pattern, str(local))
@@ -119,8 +116,9 @@ class SyncWindow(QMainWindow):
                 logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
                 self.l_prompt.setText(LANGUAGE['sync_begin'][CONFIGURE['language']])
         else:
-            logger.info(LANGUAGE['sync_begin'][CONFIGURE['language']])
-            self.l_prompt.setText(LANGUAGE['sync_begin'][CONFIGURE['language']])
+            msg = LANGUAGE['error'][CONFIGURE['language']]
+            logger.info(msg)
+            self.l_prompt.setText(msg)
 
     def stop_sync(self) -> None:
         """Метод останавливает цикл синхронизации"""
@@ -128,8 +126,6 @@ class SyncWindow(QMainWindow):
         self.pb_stop.setEnabled(False)
         self.loop = False
         self.sync_service.stop_sync()
-        logger.info(LANGUAGE['sync_end'][CONFIGURE['language']])
-        self.l_prompt.setText(LANGUAGE['sync_end'][CONFIGURE['language']])
 
     def on_tray_icon_activated(self, reason) -> None:
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick: # type: ignore

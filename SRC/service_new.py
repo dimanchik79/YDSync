@@ -165,6 +165,7 @@ class RealTimeYandexDiskSync:
 
     def handle_local_sync_event(self, event):
         """Обработка событий от локальной файловой системы"""
+
         try:
             if event['type'] in ['created', 'modified']:
                 local_path = self.local_folder / event['src_path']
@@ -248,8 +249,6 @@ class RealTimeYandexDiskSync:
 
     def initial_sync(self):
         """Первоначальная синхронизация"""
-        self.logger.info("Запуск первоначальной синхронизации...")
-
         try:
             # Создаем папку на Yandex.Disk если не существует
             if not self.disk.exists(self.remote_folder):
@@ -271,20 +270,22 @@ class RealTimeYandexDiskSync:
                         self.upload_file(str(relative_path))
 
             self.logger.info("Первоначальная синхронизация завершена")
-
         except Exception as e:
             self.logger.error(f"Ошибка первоначальной синхронизации: {e}")
 
     def start_sync(self):
         """Запуск синхронизации в реальном времени"""
+
         if not self.check_token():
-            self.logger.error("Неверный OAuth токен")
+            msg = self.language['token_error'][self.config['language']]
+            self.logger.error(msg)
             return False
 
         self.is_running = True
 
         # Первоначальная синхронизация
-        self.initial_sync()
+        self.initial_sync = threading.Thread(target=self.initial_sync, daemon=True)
+        self.initial_sync.start()
 
         # Запуск мониторинга локальной файловой системы
         event_handler = self.LocalFileHandler(self)
@@ -312,9 +313,11 @@ class RealTimeYandexDiskSync:
             self.local_observer.join()
 
         if self.remote_poll_thread and self.remote_poll_thread.is_alive():
-            self.remote_poll_thread.join(timeout=5)
+            self.remote_poll_thread.join(timeout=2)
 
         if self.processor_thread and self.processor_thread.is_alive():
-            self.processor_thread.join(timeout=5)
+            self.processor_thread.join(timeout=2)
 
-        self.logger.info("Синхронизатор остановлен")
+        msg = self.language['sync_end'][self.config['language']]
+        self.logger.info(msg)
+        self.window.l_prompt.setText(msg)
