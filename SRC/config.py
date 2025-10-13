@@ -57,9 +57,9 @@ tray_menu_style = """
             }
         """
 
-qlineedit_style_error = """color: rgb(153, 193, 241); border: 1px solid red;"""
+qlineedit_style_error = """color: rgb(153, 193, 241); border: 1px solid red; border-radius: 7px;"""
 
-qlineedit_style = """color: rgb(153, 193, 241); border: 1px solid white;"""
+qlineedit_style = """color: rgb(153, 193, 241); border: 1px solid white; border-radius: 7px;"""
 
 
 windows_drive_pattern = r'^[a-zA-Z]:[\\/]'

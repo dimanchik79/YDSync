@@ -183,6 +183,7 @@ background-color: #007acc;
     <property name="styleSheet">
      <string notr="true">color: rgb(153, 193, 241);
 border: 1px solid white;
+border-radius: 7px;
 </string>
     </property>
     <property name="inputMethodHints">
@@ -207,6 +208,8 @@ border: 1px solid white;
     <property name="styleSheet">
      <string notr="true">color: rgb(153, 193, 241);
 border: 1px solid white;
+border-radius: 7px;
+
 </string>
     </property>
    </widget>
@@ -268,7 +271,9 @@ border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="styleSheet">
      <string notr="true">color: rgb(153, 193, 241);
-border: 1px solid white;</string>
+border: 1px solid white;
+border-radius: 7px;
+</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="le_ignoreextension">
@@ -282,7 +287,9 @@ border: 1px solid white;</string>
     </property>
     <property name="styleSheet">
      <string notr="true">color: rgb(153, 193, 241);
-border: 1px solid white;</string>
+border: 1px solid white;
+border-radius: 7px;
+</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pb_ignorefiles">
@@ -350,7 +357,9 @@ border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="styleSheet">
      <string notr="true">color: rgb(153, 193, 241);
-border: 1px solid white;</string>
+border: 1px solid white;
+border-radius: 7px;
+</string>
     </property>
     <property name="inputMethodHints">
      <set>Qt::ImhNone</set>
@@ -532,7 +541,9 @@ border: 2px solid  rgb(153, 193, 241);</string>
     </property>
     <property name="styleSheet">
      <string notr="true">color: rgb(153, 193, 241);
-border: 1px solid white;</string>
+border: 1px solid white;
+border-radius: 7px;
+</string>
     </property>
    </widget>
   </widget>
