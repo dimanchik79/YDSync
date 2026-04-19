@@ -1,323 +1,622 @@
 import os
 import time
 import threading
+import hashlib
 from pathlib import Path
+from collections import deque
+from datetime import datetime
+from typing import Dict, Optional, Tuple
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from yadisk import YaDisk
 
-class RealTimeYandexDiskSync:
+class TwoWayYandexDiskSync:
+    """Двухсторонняя синхронизация с Яндекс.Диском"""
+    
     def __init__(self, window, logger, configure, language):
         self.window = window
         self.logger = logger
         self.config = configure
         self.language = language
-
+        
+        # Инициализация API
         self.disk = YaDisk(token=self.config['token'])
-        self.local_folder = Path(self.config['local']).resolve()
-        self.remote_folder = self.config['yddir'].strip('/')
+        self.local_root = Path(self.config['local']).resolve()
+        self.remote_root = self.config['yddir'].strip('/')
+        
+        # Состояние синхронизатора
         self.is_running = False
-
-        # Очередь для обработки событий
-        self.event_queue = []
+        self.stop_event = threading.Event()
+        
+        # Очередь событий
+        self.event_queue = deque()
         self.queue_lock = threading.Lock()
-        self.processing = False
-
-        # Трекеры изменений
+        
+        # Блокировка для предотвращения циклов
+        self.sync_lock = threading.Lock()
+        self.syncing = False
+        
+        # Кэш состояния удалённых файлов
+        self.remote_state_cache: Dict[str, dict] = {}
+        self.cache_lock = threading.Lock()
+        
+        # Интервалы
+        self.poll_interval = 5  # секунды для опроса Яндекс.Диска
+        
+        # Потоки
         self.local_observer = None
-        self.remote_poll_thread = None
-
-        # Блокировки для предотвращения циклических синхронизаций
-        self.sync_in_progress = False
-        self.last_remote_check = 0
-        self.remote_check_interval = 10  # секунды
-
-        # Создаем локальную папку если не существует
-        self.local_folder.mkdir(parents=True, exist_ok=True)
-
-    def check_token(self):
+        self.remote_monitor_thread = None
+        self.queue_processor_thread = None
+        
+        # Создаём локальную папку
+        self.local_root.mkdir(parents=True, exist_ok=True)
+        
+    # ============================================================
+    #  Базовые операции с Яндекс.Диском
+    # ============================================================
+    
+    def check_token(self) -> bool:
         """Проверка валидности токена"""
         try:
             return self.disk.check_token()
         except Exception as e:
-            self.logger.error(f"Ошибка проверки токена: {e}")
+            self.logger.error(f"Toke verify error: {e}")
             return False
-
-    class LocalFileHandler(FileSystemEventHandler):
+    
+    def _get_remote_path(self, relative_path: str) -> str:
+        """Получить полный путь на Яндекс.Диске"""
+        return f"{self.remote_root}/{relative_path}".replace('\\', '/')
+    
+    def _get_remote_info(self, relative_path: str) -> Optional[dict]:
+        """Получить информацию о файле на Яндекс.Диске"""
+        try:
+            remote_path = self._get_remote_path(relative_path)
+            if self.disk.exists(remote_path):
+                info = self.disk.get_meta(remote_path)
+                return {
+                    'size': info['size'],
+                    'modified': info['modified'],
+                    'etag': info.get('etag', ''),
+                    'type': info['type']
+                }
+        except Exception as e:
+            self.logger.debug(f"Ошибка получения информации о {relative_path}: {e}")
+        return None
+    
+    def _get_local_info(self, relative_path: str) -> Optional[dict]:
+        """Получить информацию о локальном файле"""
+        local_path = self.local_root / relative_path
+        if local_path.exists() and local_path.is_file():
+            stat = local_path.stat()
+            return {
+                'size': stat.st_size,
+                'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                'type': 'file'
+            }
+        return None
+    
+    def _compute_md5(self, file_path: Path) -> str:
+        """Вычисление MD5 хеша файла"""
+        hash_md5 = hashlib.md5()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+    
+    # ============================================================
+    #  Синхронизация файлов и папок
+    # ============================================================
+    
+    def upload_file(self, relative_path: str) -> bool:
+        """Загрузить файл на Яндекс.Диск"""
+        try:
+            local_path = self.local_root / relative_path
+            if not local_path.exists():
+                return False
+            
+            remote_path = self._get_remote_path(relative_path)
+            
+            # Создаём удалённые папки
+            remote_dir = os.path.dirname(remote_path)
+            if remote_dir and not self.disk.exists(remote_dir):
+                self.disk.mkdir(remote_dir)
+            
+            # Загружаем файл с перезаписью
+            self.disk.upload(str(local_path), remote_path, overwrite=True)
+            self.logger.info(f"[UPLOAD]: {relative_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Upload error {relative_path}: {e}")
+            return False
+    
+    def download_file(self, relative_path: str) -> bool:
+        """Скачать файл с Яндекс.Диска"""
+        try:
+            remote_path = self._get_remote_path(relative_path)
+            local_path = self.local_root / relative_path
+            
+            # Создаём локальные папки
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Скачиваем файл с перезаписью
+            self.disk.download(remote_path, str(local_path), overwrite=True)
+            self.logger.info(f"[DOWNLOAD]: {relative_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Download error {relative_path}: {e}")
+            return False
+    
+    def delete_remote(self, relative_path: str, is_dir: bool = False) -> bool:
+        """Удалить файл/папку на Яндекс.Диске"""
+        try:
+            remote_path = self._get_remote_path(relative_path)
+            if self.disk.exists(remote_path):
+                self.disk.remove(remote_path, permanently=True)
+                self.logger.info(f"[DELETE] on Yandex.Disk: {relative_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Delete error {relative_path}: {e}")
+            return False
+    
+    def delete_local(self, relative_path: str) -> bool:
+        """Удалить локальный файл/папку"""
+        try:
+            local_path = self.local_root / relative_path
+            if local_path.exists():
+                if local_path.is_dir():
+                    import shutil
+                    shutil.rmtree(local_path)
+                else:
+                    local_path.unlink()
+                self.logger.info(f"[DELETE] local: {relative_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Local delele error {relative_path}: {e}")
+            return False
+    
+    def move_remote(self, old_path: str, new_path: str) -> bool:
+        """Переместить файл на Яндекс.Диске"""
+        try:
+            old_remote = self._get_remote_path(old_path)
+            new_remote = self._get_remote_path(new_path)
+            
+            # Создаём целевую папку
+            new_dir = os.path.dirname(new_remote)
+            if new_dir and not self.disk.exists(new_dir):
+                self.disk.mkdir(new_dir)
+            
+            self.disk.move(old_remote, new_remote)
+            self.logger.info(f"[MOVE] Yandex.Disk: {old_path} -> {new_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Move error {old_path} -> {new_path}: {e}")
+            return False
+    
+    def move_local(self, old_path: str, new_path: str) -> bool:
+        """Переместить локальный файл"""
+        try:
+            old_local = self.local_root / old_path
+            new_local = self.local_root / new_path
+            
+            # Создаём целевую папку
+            new_local.parent.mkdir(parents=True, exist_ok=True)
+            
+            old_local.rename(new_local)
+            self.logger.info(f"[MOVE] local: {old_path} -> {new_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Local move error: {e}")
+            return False
+    
+    # ============================================================
+    #  Сбор состояния файлов
+    # ============================================================
+    
+    def _scan_local_files(self) -> Dict[str, dict]:
+        """Сканирование всех локальных файлов"""
+        files = {}
+        for file_path in self.local_root.rglob('*'):
+            if file_path.is_file():
+                rel_path = str(file_path.relative_to(self.local_root))
+                stat = file_path.stat()
+                files[rel_path] = {
+                    'size': stat.st_size,
+                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    'type': 'file'
+                }
+        return files
+    
+    def _scan_remote_files(self) -> Dict[str, dict]:
+        """Сканирование всех удалённых файлов (рекурсивно)"""
+        files = {}
+        
+        def scan(remote_path: str, base_path: str = ''):
+            try:
+                for item in self.disk.listdir(remote_path):
+                    item_path = item['path']
+                    # Извлекаем относительный путь
+                    rel = self._extract_relative_path(item_path)
+                    
+                    if item['type'] == 'file':
+                        files[rel] = {
+                            'size': item['size'],
+                            'modified': item['modified'],
+                            'type': 'file'
+                        }
+                    elif item['type'] == 'dir':
+                        scan(item_path, rel)
+            except Exception as e:
+                self.logger.error(f"Scan ERROR {remote_path}: {e}")
+        
+        try:
+            if self.disk.exists(self.remote_root):
+                scan(self.remote_root)
+        except Exception as e:
+            self.logger.error(f"Romote file SCAN Error: {e}")
+        
+        return files
+    
+    def _extract_relative_path(self, full_path: str) -> str:
+        """Извлечение относительного пути из полного пути Яндекс.Диска"""
+        # Убираем 'disk:'
+        if full_path.startswith('disk:'):
+            full_path = full_path[5:]
+        full_path = full_path.lstrip('/\\')
+        
+        # Находим часть после remote_root
+        try:
+            path = Path(full_path)
+            rel = path.relative_to(self.remote_root)
+            return str(rel).replace('\\', '/')
+        except ValueError:
+            return full_path.replace('\\', '/')
+    
+    # ============================================================
+    #  Синхронизация
+    # ============================================================
+    
+    def _determine_action(self, local_info: Optional[dict], 
+                         remote_info: Optional[dict]) -> Tuple[str, Optional[str]]:
+        """
+        Определяет, какое действие нужно выполнить.
+        Возвращает (action, reason)
+        action: 'upload', 'download', 'delete_local', 'delete_remote', 'none'
+        """
+        # Только локальный
+        if local_info and not remote_info:
+            return ('upload', 'только локально')
+        
+        # Только удалённый
+        if not local_info and remote_info:
+            return ('download', 'только на диске')
+        
+        # Нет нигде
+        if not local_info and not remote_info:
+            return ('none', '')
+        
+        # Есть везде - сравниваем
+        if local_info and remote_info:
+            # Сравниваем размер и дату
+            if local_info['size'] != remote_info['size']:
+                # Определяем, что новее
+                if local_info['modified'] > remote_info['modified']:
+                    return ('upload', 'локальная версия новее')
+                else:
+                    return ('download', 'удалённая версия новее')
+            
+            # Для папок возвращаем none
+            if local_info.get('type') == 'dir' or remote_info.get('type') == 'dir':
+                return ('none', '')
+        
+        return ('none', 'синхронизировано')
+    
+    def sync_file(self, relative_path: str, local_info: Optional[dict], 
+                  remote_info: Optional[dict]) -> bool:
+        """Синхронизирует один файл"""
+        action, reason = self._determine_action(local_info, remote_info)
+        
+        if action == 'none':
+            return True
+        
+        self.logger.debug(f"Synhronize {relative_path}: {action} ({reason})")
+        
+        if action == 'upload':
+            return self.upload_file(relative_path)
+        elif action == 'download':
+            return self.download_file(relative_path)
+        elif action == 'delete_local':
+            return self.delete_local(relative_path)
+        elif action == 'delete_remote':
+            return self.delete_remote(relative_path)
+        
+        return False
+    
+    def full_sync(self) -> bool:
+        """Полная синхронизация всех файлов"""
+        self.logger.info("[SYNC] Full synhronize begin...")
+        
+        with self.sync_lock:
+            self.syncing = True
+            try:
+                # Сканируем обе стороны
+                local_files = self._scan_local_files()
+                remote_files = self._scan_remote_files()
+                
+                # Синхронизируем все файлы
+                all_paths = set(local_files.keys()) | set(remote_files.keys())
+                
+                synced = 0
+                for path in all_paths:
+                    if self.sync_file(path, 
+                                     local_files.get(path), 
+                                     remote_files.get(path)):
+                        synced += 1
+                
+                self.logger.info(f"[SYNC] Full sync end ({synced} files)")
+                
+                # Обновляем кэш
+                with self.cache_lock:
+                    self.remote_state_cache = remote_files.copy()
+                
+                return True
+                
+            except Exception as e:
+                self.logger.error(f"Full synhronize Error: {e}")
+                return False
+            finally:
+                self.syncing = False
+    
+    # ============================================================
+    #  Обработка событий
+    # ============================================================
+    
+    class LocalEventHandler(FileSystemEventHandler):
         def __init__(self, sync_manager):
             self.sync_manager = sync_manager
-
+        
         def on_created(self, event):
-            if not event.is_directory:
-                self.sync_manager.handle_local_event('created', event.src_path)
-
-        def on_modified(self, event):
-            if not event.is_directory:
-                self.sync_manager.handle_local_event('modified', event.src_path)
-
-        def on_deleted(self, event):
-            if not event.is_directory:
-                self.sync_manager.handle_local_event('deleted', event.src_path)
-
-        def on_moved(self, event):
-            if not event.is_directory:
-                self.sync_manager.handle_local_event('moved', event.src_path, event.dest_path)
-
-    def handle_local_event(self, event_type, src_path, dest_path=None):
-        """Обработка локальных событий файловой системы"""
-        if self.sync_in_progress:
-            return
-
-        try:
-            local_path = Path(src_path)
-            if not local_path.is_relative_to(self.local_folder):
+            if self.sync_manager.syncing:
                 return
-
-            relative_path = local_path.relative_to(self.local_folder)
-
+            if not event.is_directory:
+                self.sync_manager._queue_event('created', event.src_path)
+        
+        def on_modified(self, event):
+            if self.sync_manager.syncing:
+                return
+            if not event.is_directory:
+                self.sync_manager._queue_event('modified', event.src_path)
+        
+        def on_deleted(self, event):
+            if self.sync_manager.syncing:
+                return
+            if not event.is_directory:
+                self.sync_manager._queue_event('deleted', event.src_path)
+        
+        def on_moved(self, event):
+            if self.sync_manager.syncing:
+                return
+            if not event.is_directory:
+                self.sync_manager._queue_event('moved', event.src_path, event.dest_path)
+    
+    def _queue_event(self, event_type: str, src: str, dest: str = None):
+        """Добавить событие в очередь"""
+        try:
+            src_path = Path(src)
+            if not src_path.is_relative_to(self.local_root):
+                return
+            
+            rel_src = str(src_path.relative_to(self.local_root))
+            rel_dest = None
+            
+            if dest:
+                dest_path = Path(dest)
+                if dest_path.is_relative_to(self.local_root):
+                    rel_dest = str(dest_path.relative_to(self.local_root))
+            
             with self.queue_lock:
                 self.event_queue.append({
                     'type': event_type,
-                    'src_path': str(relative_path),
-                    'dest_path': str(Path(dest_path).relative_to(self.local_folder)) if dest_path else None,
-                    'timestamp': time.time(),
-                    'source': 'local'
+                    'src': rel_src,
+                    'dest': rel_dest,
+                    'time': time.time()
                 })
-
-            self.logger.debug(f"Локальное событие: {event_type} - {relative_path}")
-
+            
+            self.logger.debug(f"Task in quelle: {event_type} - {rel_src}")
+            
         except Exception as e:
-            self.logger.error(f"Ошибка обработки локального события: {e}")
-
-    def monitor_remote_changes(self):
-        """Мониторинг изменений на Yandex.Disk"""
-        last_remote_state = {}
-
-        while self.is_running:
-            try:
-                current_time = time.time()
-                if current_time - self.last_remote_check >= self.remote_check_interval:
-                    self.last_remote_check = current_time
-
-                    current_remote_state = {}
-                    for item in self.disk.listdir(self.remote_folder):
-                        if item['type'] == 'file':
-                            current_remote_state[item['name']] = {
-                                'size': item['size'],
-                                'modified': item['modified']
-                            }
-
-                    # Обнаружение новых файлов
-                    for filename in current_remote_state:
-                        if filename not in last_remote_state:
-                            with self.queue_lock:
-                                self.event_queue.append({
-                                    'type': 'created',
-                                    'src_path': filename,
-                                    'timestamp': time.time(),
-                                    'source': 'remote'
-                                })
-                            self.logger.debug(f"Обнаружен новый файл на Yandex.Disk: {filename}")
-
-                    # Обнаружение удаленных файлов
-                    for filename in last_remote_state:
-                        if filename not in current_remote_state:
-                            with self.queue_lock:
-                                self.event_queue.append({
-                                    'type': 'deleted',
-                                    'src_path': filename,
-                                    'timestamp': time.time(),
-                                    'source': 'remote'
-                                })
-                            self.logger.debug(f"Обнаружено удаление на Yandex.Disk: {filename}")
-
-                    last_remote_state = current_remote_state
-
-            except Exception as e:
-                self.logger.error(f"Ошибка мониторинга Yandex.Disk: {e}")
-
-            time.sleep(5)
-
-    def process_event_queue(self):
+            self.logger.error(f"Qwuelle Error: {e}")
+    
+    def _process_events(self):
         """Обработка очереди событий"""
-        while self.is_running:
+        while not self.stop_event.is_set() and self.is_running:
             try:
                 with self.queue_lock:
                     if not self.event_queue:
                         time.sleep(0.1)
                         continue
-
-                    event = self.event_queue.pop(0)
-
-                self.sync_in_progress = True
-
-                if event['source'] == 'local':
-                    self.handle_local_sync_event(event)
-                else:
-                    self.handle_remote_sync_event(event)
-
-                self.sync_in_progress = False
-
+                    event = self.event_queue.popleft()
+                
+                with self.sync_lock:
+                    self._handle_event(event)
+                    
             except Exception as e:
-                self.logger.error(f"Ошибка обработки события: {e}")
-                self.sync_in_progress = False
+                self.logger.error(f"Quelle ERROR: {e}")
                 time.sleep(1)
-
-    def handle_local_sync_event(self, event):
-        """Обработка событий от локальной файловой системы"""
-
-        try:
-            if event['type'] in ['created', 'modified']:
-                local_path = self.local_folder / event['src_path']
-                if local_path.exists():
-                    self.upload_file(event['src_path'])
-
-            elif event['type'] == 'deleted':
-                self.delete_remote_file(event['src_path'])
-
-            elif event['type'] == 'moved':
-                # Удаляем старый файл и загружаем новый
-                self.delete_remote_file(event['src_path'])
-                if event['dest_path']:
-                    self.upload_file(event['dest_path'])
-
-        except Exception as e:
-            self.logger.error(f"Ошибка обработки локального события синхронизации: {e}")
-
-    def handle_remote_sync_event(self, event):
-        """Обработка событий от Yandex.Disk"""
-        try:
-            if event['type'] == 'created':
-                self.download_file(event['src_path'])
-
-            elif event['type'] == 'deleted':
-                local_path = self.local_folder / event['src_path']
-                if local_path.exists():
-                    local_path.unlink()
-                    self.logger.info(f"Удален локальный файл: {event['src_path']}")
-
-        except Exception as e:
-            self.logger.error(f"Ошибка обработки удаленного события синхронизации: {e}")
-
-    def upload_file(self, relative_path):
-        """Загрузка файла на Yandex.Disk"""
-        try:
-            local_path = self.local_folder / relative_path
-            remote_path = f"{self.remote_folder}/{relative_path}".replace('\\', '/')
-
-            # Создаем папки на Yandex.Disk если нужно
-            remote_dir = os.path.dirname(remote_path)
-            if remote_dir and not self.disk.exists(remote_dir):
-                self.disk.mkdir(remote_dir)
-
-            self.disk.upload(str(local_path), remote_path)
-            self.logger.info(f"Загружен на Yandex.Disk: {relative_path}")
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Ошибка загрузки {relative_path}: {e}")
-            return False
-
-    def download_file(self, relative_path):
-        """Скачивание файла с Yandex.Disk"""
-        try:
-            remote_path = f"{self.remote_folder}/{relative_path}"
-            local_path = self.local_folder / relative_path
-
-            # Создаем локальные папки если нужно
-            local_path.parent.mkdir(parents=True, exist_ok=True)
-
-            self.disk.download(remote_path, str(local_path))
-            self.logger.info(f"Скачан с Yandex.Disk: {relative_path}")
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Ошибка скачивания {relative_path}: {e}")
-            return False
-
-    def delete_remote_file(self, relative_path):
-        """Удаление файла с Yandex.Disk"""
-        try:
-            remote_path = f"{self.remote_folder}/{relative_path}"
-            if self.disk.exists(remote_path):
-                self.disk.remove(remote_path, permanently=True)
-                self.logger.info(f"Удален с Yandex.Disk: {relative_path}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Ошибка удаления {relative_path}: {e}")
-            return False
-
-    def initial_sync(self):
-        """Первоначальная синхронизация"""
-        try:
-            # Создаем папку на Yandex.Disk если не существует
-            if not self.disk.exists(self.remote_folder):
-                self.disk.mkdir(self.remote_folder)
-
-            # Скачиваем файлы с Yandex.Disk
-            for item in self.disk.listdir(self.remote_folder):
-                if item['type'] == 'file':
-                    local_path = self.local_folder / item['name']
-                    if not local_path.exists():
-                        self.download_file(item['name'])
-
-            # Загружаем локальные файлы
-            for local_file in self.local_folder.rglob('*'):
-                if local_file.is_file():
-                    relative_path = local_file.relative_to(self.local_folder)
-                    remote_path = f"{self.remote_folder}/{relative_path}"
-                    if not self.disk.exists(remote_path):
-                        self.upload_file(str(relative_path))
-
-            self.logger.info("Первоначальная синхронизация завершена")
-        except Exception as e:
-            self.logger.error(f"Ошибка первоначальной синхронизации: {e}")
-
-    def start_sync(self):
-        """Запуск синхронизации в реальном времени"""
-
+    
+    def _handle_event(self, event: dict):
+        """Обработка одного события"""
+        event_type = event['type']
+        src = event['src']
+        dest = event.get('dest')
+        
+        if event_type == 'created':
+            # Проверяем, нет ли уже такого файла на диске
+            remote_info = self._get_remote_info(src)
+            if remote_info:
+                # Сравниваем, что новее
+                local_info = self._get_local_info(src)
+                if local_info and local_info['modified'] > remote_info['modified']:
+                    self.upload_file(src)
+            else:
+                self.upload_file(src)
+                
+        elif event_type == 'modified':
+            # Загружаем изменённый файл
+            self.upload_file(src)
+            
+        elif event_type == 'deleted':
+            # Удаляем на диске
+            self.delete_remote(src)
+            
+        elif event_type == 'moved' and dest:
+            # Перемещаем на диске
+            self.move_remote(src, dest)
+    
+    def _monitor_remote(self):
+        """Мониторинг удалённых изменений"""
+        last_state = {}
+        
+        while not self.stop_event.is_set() and self.is_running:
+            try:
+                time.sleep(self.poll_interval)
+                
+                if self.syncing:
+                    continue
+                
+                # Сканируем текущее состояние
+                current_state = self._scan_remote_files()
+                
+                # Находим изменения
+                all_paths = set(last_state.keys()) | set(current_state.keys())
+                
+                for path in all_paths:
+                    if self.syncing:
+                        break
+                    
+                    last = last_state.get(path)
+                    current = current_state.get(path)
+                    
+                    # Файл удалён
+                    if last and not current:
+                        self._queue_remote_change('deleted', path)
+                    
+                    # Файл создан
+                    elif not last and current:
+                        self._queue_remote_change('created', path)
+                    
+                    # Файл изменён
+                    elif last and current:
+                        if (last['size'] != current['size'] or 
+                            last['modified'] != current['modified']):
+                            self._queue_remote_change('modified', path)
+                
+                last_state = current_state
+                
+            except Exception as e:
+                self.logger.error(f"Ошибка мониторинга удалённых файлов: {e}")
+    
+    def _queue_remote_change(self, change_type: str, path: str):
+        """Обработка удалённых изменений"""
+        if self.syncing:
+            return
+        
+        with self.sync_lock:
+            if change_type == 'created':
+                # Скачиваем новый файл
+                local_info = self._get_local_info(path)
+                if not local_info:
+                    self.download_file(path)
+                else:
+                    # Сравниваем, что новее
+                    remote_info = self._get_remote_info(path)
+                    if remote_info and remote_info['modified'] > local_info['modified']:
+                        self.download_file(path)
+                    else:
+                        self.upload_file(path)
+                        
+            elif change_type == 'deleted':
+                # Удаляем локальный файл
+                self.delete_local(path)
+                
+            elif change_type == 'modified':
+                # Скачиваем обновлённый файл
+                self.download_file(path)
+    
+    # ============================================================
+    #  Управление синхронизацией
+    # ============================================================
+    
+    def start_sync(self) -> bool:
+        """Запуск синхронизации"""
         if not self.check_token():
-            msg = self.language['token_error'][self.config['language']]
+            msg = self.language.get('token_error', {}).get(self.config['language'], 'Ошибка токена')
             self.logger.error(msg)
+            if self.window:
+                self.window.l_prompt.setText(msg)
             return False
-
+        
+        if self.is_running:
+            self.logger.warning("Sync starting now...")
+            return False
+        
         self.is_running = True
-
-        # Первоначальная синхронизация
-        self.initial_sync = threading.Thread(target=self.initial_sync, daemon=True)
-        self.initial_sync.start()
-
-        # Запуск мониторинга локальной файловой системы
-        event_handler = self.LocalFileHandler(self)
+        self.stop_event.clear()
+        
+        # Полная синхронизация при запуске
+        self.full_sync()
+        
+        # Запуск локального мониторинга
+        event_handler = self.LocalEventHandler(self)
         self.local_observer = Observer()
-        self.local_observer.schedule(event_handler, str(self.local_folder), recursive=True)
+        self.local_observer.schedule(event_handler, str(self.local_root), recursive=True)
         self.local_observer.start()
-
-        # Запуск мониторинга Yandex.Disk
-        self.remote_poll_thread = threading.Thread(target=self.monitor_remote_changes, daemon=True)
-        self.remote_poll_thread.start()
-
-        # Запуск обработки очереди событий
-        self.processor_thread = threading.Thread(target=self.process_event_queue, daemon=True)
-        self.processor_thread.start()
-
-        self.logger.info("Синхронизатор в реальном времени запущен")
+        
+        # Запуск удалённого мониторинга
+        self.remote_monitor_thread = threading.Thread(target=self._monitor_remote, daemon=True)
+        self.remote_monitor_thread.start()
+        
+        # Запуск обработчика очереди
+        self.queue_processor_thread = threading.Thread(target=self._process_events, daemon=True)
+        self.queue_processor_thread.start()
+        
+        msg = self.language.get('sync_start', {}).get(self.config['language'], 'Синхронизация запущена')
+        self.logger.info(msg)
+        if self.window:
+            self.window.l_prompt.setText(msg)
+        
         return True
-
+    
     def stop_sync(self):
         """Остановка синхронизации"""
+        if not self.is_running:
+            return
+        
         self.is_running = False
-
+        self.stop_event.set()
+        
+        # Останавливаем локальный наблюдатель
         if self.local_observer:
             self.local_observer.stop()
-            self.local_observer.join()
-
-        if self.remote_poll_thread and self.remote_poll_thread.is_alive():
-            self.remote_poll_thread.join(timeout=2)
-
-        if self.processor_thread and self.processor_thread.is_alive():
-            self.processor_thread.join(timeout=2)
-
-        msg = self.language['sync_end'][self.config['language']]
+            self.local_observer.join(timeout=2)
+        
+        # Ждём завершения потоков
+        if self.remote_monitor_thread and self.remote_monitor_thread.is_alive():
+            self.remote_monitor_thread.join(timeout=2)
+        
+        if self.queue_processor_thread and self.queue_processor_thread.is_alive():
+            self.queue_processor_thread.join(timeout=2)
+        
+        # Очищаем очередь
+        with self.queue_lock:
+            self.event_queue.clear()
+        
+        msg = self.language.get('sync_end', {}).get(self.config['language'], 'Синхронизация остановлена')
         self.logger.info(msg)
-        self.window.l_prompt.setText(msg)
+        if self.window:
+            self.window.l_prompt.setText(msg)
+    
+    def force_resync(self):
+        """Принудительная полная синхронизация"""
+        self.full_sync()

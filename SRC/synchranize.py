@@ -9,16 +9,14 @@ import time
 
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from threading import Thread
-
 from PyQt5 import uic, QtWidgets, QtGui
-from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog, QDialog
+from PyQt5.QtWidgets import QMainWindow, QAction, QMenu, QFileDialog
 
 from SRC.config import LANGUAGE
 from SRC.utils import get_time
 from SRC.config import tray_menu_style, qlineedit_style_error, qlineedit_style, windows_drive_pattern
 
-from SRC.service_new import RealTimeYandexDiskSync
+from SRC.service_new import TwoWayYandexDiskSync
 
 CONFIGURE = json.load(open("config.json", "r"))
 
@@ -144,7 +142,7 @@ class SyncWindow(QMainWindow):
     def create_sync_service(self) -> None:
         # Создание сервиса синхронизации
         try:
-            self.sync_service = RealTimeYandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
+            self.sync_service = TwoWayYandexDiskSync(self, logger, CONFIGURE, LANGUAGE)
         except Exception as e:
             if e == 'Invalid Yandex.Disk token':
                 self.l_prompt.setText(LANGUAGE['token_error'][CONFIGURE['language']])
